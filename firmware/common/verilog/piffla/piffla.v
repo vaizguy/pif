@@ -25,7 +25,8 @@ assign zero = (Ctr[BITS] == 1'b1);
 
 endmodule 
 
-module osch (
+// synthesis translate_off
+module OSCH (
 
     input  stdby,
     output osc,
@@ -47,6 +48,7 @@ end
 assign osc = osc_clk;
 
 endmodule
+// synthesis translate_on
 
 module pif_flasher (
 
@@ -116,7 +118,7 @@ assign red = R;
 assign green = G;
 assign xclk = osc;
 
-osch #(.NOM_FREQ(OSC_STR)) i_osch (
+OSCH #(.NOM_FREQ(OSC_STR)) i_OSCH (
 
     /*input */ .stdby   (1'b0), // could use stdby signal
     /*output*/ .osc     (osc ), 

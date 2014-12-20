@@ -56,17 +56,17 @@ pifctl i_pifctl(
 
 reg r, g;
 
-always (*) begin : led_pattern_select_blk
+always @(*) begin : led_pattern_select_blk
 
-    case(1):
+    case(1)
 
-        (MiscReg==LED_ALTERNATING): 
+        (MiscReg==`LED_ALTERNATING): 
         begin
             r = red_flash;
             g = green_flash;
         end
 
-        (MiscReg==LED_SYNC):
+        (MiscReg==`LED_SYNC):
         begin
             r = red_flash;
             g = green_flash;
@@ -79,13 +79,14 @@ always (*) begin : led_pattern_select_blk
         end
 
     endcase
+end
 
 // Global set/reset
-IB IBgsr     (.I(GSRn), .O(GSRnX));
-GSR GSR_GSR  (.GSR(GSRnX));
+IB IBgsr (.I(GSRn), .O(GSRnX));
+GSR GSR_GSR (.GSR(GSRnX));
 
 // Outputs
-OB   REG_BUF (.I(r   ), .O(LEDR ));
-OB GREEN_BUF (.I(g   ), .O(LEDG ));
+OB   REG_BUF (.I(r), .O(LEDR));
+OB GREEN_BUF (.I(g), .O(LEDG));
 
 endmodule
