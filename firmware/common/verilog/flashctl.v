@@ -1,3 +1,4 @@
+`include "./pifdefs.v"
 
 module flasher (
 
@@ -23,6 +24,12 @@ wire XO;
 wire GSRnX;
 wire MiscReg;
 
+wire                                 XI_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
+wire  [2**`XA_BITS-1:0             ] XI_PRWA;        /*: TXA;          -- registered incoming addr bus        */
+wire                                 XI_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
+wire  [`XSUBA_MAX   :0             ] XI_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
+wire  [7            :`I2C_TYPE_BITS] XI_PD;          /*: TwrData;      -- registered incoming data bus        */
+
 // LED Flasher
 pif_flasher i_pif_flasher (
     
@@ -39,7 +46,13 @@ pifwb i_pifwb (
 
     /*input */ .xclk    (xclk),
 
-    /*output*/ .XI      (XI  ),
+    ///*output*/ .XI      (XI  ),
+               .XI_PWr        (XI_PWr        ),        
+               .XI_PRWA       (XI_PRWA       ),       
+               .XI_PRdFinished(XI_PRdFinished),
+               .XI_PRdSubA    (XI_PRdSubA    ),    
+               .XI_PD         (XI_PD         ),         
+
     /*input */ .XO      (XO  )
 );
 
@@ -48,7 +61,13 @@ pifctl i_pifctl(
 
     /*input */ .xclk    (xclk   ),
 
-    /*input */ .XI      (XI     ),
+    ///*input */ .XI      (XI     ),
+               .XI_PWr        (XI_PWr        ),        
+               .XI_PRWA       (XI_PRWA       ),       
+               .XI_PRdFinished(XI_PRdFinished),
+               .XI_PRdSubA    (XI_PRdSubA    ),    
+               .XI_PD         (XI_PD         ),         
+
     /*output*/ .XO      (XO     ),
       
     /*output*/ .MiscReg (MiscReg)

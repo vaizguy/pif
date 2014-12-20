@@ -1,3 +1,4 @@
+`include "./pifdefs.v"
 
 module pifwb (
 
@@ -6,7 +7,14 @@ module pifwb (
 
     input       xclk   ,
 
-    XIrec       XI     ,
+    //XIrec       XI     , // works only with sv
+
+    output                                 XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
+    output  [2**`XA_BITS-1:0             ] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
+    output                                 XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
+    output  [`XSUBA_MAX   :0             ] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
+    output  [7            :`I2C_TYPE_BITS] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
+
     input [7:0] XO
 );
 
@@ -54,29 +62,30 @@ parameter [7:0]  CFG_RXDR   = 8'h73;
 parameter [7:0]  CFG_IRQ    = 8'h74;
 parameter [7:0]  CFG_IRQEN  = 8'h75;
 
-wire wbCyc;
-wire wbStb;
-wire wbWe;
+wire [7:0] wbDat_o;
+
+reg [7:0] wbDat_i;
+reg [7:0] wbAddr;
+reg [7:0] wbOutBuff;
+
+reg busy; 
+reg txReady; 
+reg rxReady; 
+reg lastTxNak; 
+reg isAddr; 
+reg isData;
+
+reg wbCyc;
+reg wbStb;
+reg wbWe;
+
 wire wbAck_o;
 
-wire [7:0] wbDat_o;
-wire [7:0] wbDat_i;
-wire [7:0] wbAddr;
-wire [7:0] wbOutBuff;
-
-wire [3:0] WBstate;
-wire [3:0] rwReturn;
-
-wire busy; 
-wire txReady; 
-wire rxReady; 
-wire lastTxNak; 
-wire wbAck; 
-wire isAddr; 
-wire isData;
+reg [3:0] WBstate;
+reg [3:0] rwReturn;
 
 // quasi-static data out from the USB
-XIrec Xiloc;
+//XIrec XIloc;
 reg [15:0] rst_pipe = 16'hffff;
 wire rst = rst_pipe[15];
 
@@ -104,10 +113,16 @@ reg [`XSUBA_MAX:0] RdSubAddr;
 reg [`XSUBA_MAX:0] WrSubAddr;
 reg [2**`XA_BITS -1:0] rwAddr;
 reg [`I2C_DATA_BITS:0] inData;
-reg wbRst;
+
+// XI interface 
+reg                                 XIloc_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
+reg  [2**`XA_BITS-1:0             ] XIloc_PRWA;        /*: TXA;          -- registered incoming addr bus        */
+reg                                 XIloc_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
+reg  [`XSUBA_MAX   :0             ] XIloc_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
+reg  [7            :`I2C_TYPE_BITS] XIloc_PD;          /*: TwrData;      -- registered incoming data bus        */
 
 // used in debug mode to reset the internal 16-bit counters
-assign wbRst = 1'b0
+wire wbRst = 1'b0
 // synthesis translate_off
                | rst
 // synthesis translate_on
@@ -117,12 +132,13 @@ assign wbRst = 1'b0
 // Power-Up Reset for 16 clocks
 // assumes initialisers are honoured by the synthesiser
 always @(posedge xclk) begin: reset_blk
-    rst <= {rst_pipe, 1'b0}
+    rst_pipe <= {rst_pipe, 1'b0};
+end
 
 //---------------------------------------------------------------------
 // wishbone state machine
 
-assign wbAck = (wbAck_o == 1'b1);
+wire wbAck = (wbAck_o == 1'b1);
 
 reg [4:0] nextState;
 reg vSlaveTransmitting;
@@ -139,10 +155,11 @@ always @(posedge xclk) begin: wb_i2c_blk
     hitI2CSR   <= (wbAddr == I2C1_SR  );
     hitI2CRXDR <= (wbAddr == I2C1_RXDR);
     hitCFGRXDR <= (wbAddr == CFG_RXDR );
+end
     
-always @(posedge xclk) begin: wb_statemachine_blk
+always @(posedge xclk) begin: wb_statemachine_blk_1
 
-    if rst begin
+    if (rst) begin
         nextState <= WBstart;
         rwReturn  <= WBstart;
         wbStb     <= 1'b0;
@@ -152,7 +169,6 @@ always @(posedge xclk) begin: wb_statemachine_blk
         txReady   <= 1'b0;
         rxReady   <= 1'b0;
         lastTxNak <= 1'b0;
-
     end
     else begin
 
@@ -161,27 +177,39 @@ always @(posedge xclk) begin: wb_statemachine_blk
             //-----------------------------------
             // initialise
             
-            WBstart: Wr(I2C1_CMDR, x"04", WBinit1); // clock stretch disable
+            WBstart: Wr(I2C1_CMDR, 'h04, WBinit1); // clock stretch disable
 
-            WBinit1: Rd(I2C1_SR, WBinit2);          // wait for not busy
+            WBinit1: Rd(I2C1_SR, WBinit2);         // wait for not busy
 
-            WBinit2: busy ? ReadRegAgain : Rd(I2C1_RXDR, WBinit3); // read and discard RXDR, #1
+            WBinit2:
+            begin
+                if (busy)
+                    nextState <= WBrd;
+                else
+                    Rd(I2C1_RXDR, WBinit3);        // read and discard RXDR, #1
+            end
 
-            WBinit3: Rd(I2C1_RXDR, WBinit4);        // read and discard RXDR, #2
+            WBinit3: Rd(I2C1_RXDR, WBinit4);       // read and discard RXDR, #2
 
-            WBinit4: Wr(I2C1_CMDR, x"00", WBidle);  // clock stretch enable
+            WBinit4: Wr(I2C1_CMDR, 'h00, WBidle);  // clock stretch enable
 
             //-----------------------------------
             // wait for I2C activity - "busy" is signalled
 
-            WBidle : busy ? Rd(I2C1_SR, WBwaitTR) : Rd(I2C1_SR, WBidle); // wait for I2C activity - "busy" is signalled
+            WBidle :
+            begin
+                if (busy)
+                    Rd(I2C1_SR, WBwaitTR);
+                else
+                    Rd(I2C1_SR, WBidle);           // wait for I2C activity - "busy" is signalled
+            end
 
             //-----------------------------------
             // wait for TRRDY
 
             WBwaitTR:
             begin
-                if lastTxNak                         // last read?
+                if (lastTxNak)                      // last read?
                     nextState <= WBstart;
                 else if (txReady)
                     Wr(I2C1_TXDR, XO, WBout0);
@@ -190,7 +218,7 @@ always @(posedge xclk) begin: wb_statemachine_blk
                 else if (!busy)
                     nextState <= WBstart;
                 else
-                    ReadRegAgain;
+                    nextState <= WBrd;
             end
 
             //-----------------------------------
@@ -210,11 +238,11 @@ always @(posedge xclk) begin: wb_statemachine_blk
 
             WBrd:
             begin
-                if wbAck begin
+                if (wbAck) begin
                     wbStb <= 1'b0;
                     wbCyc <= 1'b0;
 
-                    if hitI2CSR begin
+                    if (hitI2CSR) begin
                         vTIP               <= (wbDat_o[7] == 1'b1);
                         vBusy              <= (wbDat_o[6] == 1'b1);
                         vRARC              <= (wbDat_o[5] == 1'b1);
@@ -222,17 +250,17 @@ always @(posedge xclk) begin: wb_statemachine_blk
                         vTxRxRdy           <= (wbDat_o[2] == 1'b1);
                         vTROE              <= (wbDat_o[1] == 1'b1);
       
-                        txReady   <= vBusy & (vTxRxRdy &&  vSlaveTransmitting & !vTIP );
-                        rxReady   <= vBusy & (vTxRxRdy && !vSlaveTransmitting         );
-                        lastTxNak <= vBusy & (vRARC    &&  vSlaveTransmitting &  vTROE);
+                        txReady   <= vBusy & (vTxRxRdy &  vSlaveTransmitting & !vTIP );
+                        rxReady   <= vBusy & (vTxRxRdy & !vSlaveTransmitting         );
+                        lastTxNak <= vBusy & (vRARC    &  vSlaveTransmitting &  vTROE);
                         busy      <= vBusy;
                     end 
-                    else if hitI2CRXDR begin
+                    else if (hitI2CRXDR) begin
                         isAddr  <= (wbDat_o[7:`I2C_DATA_BITS] == `A_ADDR);
                         isData  <= (wbDat_o[7:`I2C_DATA_BITS] == `D_ADDR);
                         inData  <=  wbDat_o[7:`I2C_DATA_BITS];
                     end
-                    else if hitCFGRXDR begin
+                    else if (hitCFGRXDR) begin
                         cfgBusy <= (wbDat_o[7] == 1'b1);
                     end
                         
@@ -250,7 +278,7 @@ always @(posedge xclk) begin: wb_statemachine_blk
 
             WBwr:
             begin
-                if wbAck begin
+                if (wbAck) begin
                     wbStb <= 1'b0;
                     wbCyc <= 1'b0;
                     wbWe  <= 1'b0;
@@ -267,8 +295,10 @@ always @(posedge xclk) begin: wb_statemachine_blk
             default: nextState <= WBstart;
 
         endcase
+    end
+end
 
-always @(posedge xclk) begin: wb_statemachine_blk
+always @(posedge xclk) begin: wb_statemachine_blk_2
 
     if (rst) begin
         rwAddr    <= 'd0;
@@ -277,32 +307,39 @@ always @(posedge xclk) begin: wb_statemachine_blk
     end 
     else begin 
 
-        XiLoc.PRdFinished <= (WBstate == WBout0);
+        XIloc_PRdFinished <= (WBstate == WBout0);
 
         if ((WBstate == WBin0) & isAddr)
-            rwAddr <= inData[XA_BITS-1:0];
+            rwAddr <= inData[`XA_BITS-1:0];
 
         if ((WBstate == WBin0) & isAddr)
             RdSubAddr <= 'd0;
-        else if XiLoc.PRdFinished 
-            RdSubAddr <= (RdSubAddr +1) % (XSUBA_MAX+1);
+        else if (XIloc_PRdFinished)
+            RdSubAddr <= (RdSubAddr +1) % (`XSUBA_MAX+1);
 
         if ((WBstate == WBin0) & isAddr)
             WrSubAddr <= 'd0;
-        else if XiLoc.PWr 
-            WrSubAddr <= (WrSubAddr +1) % (XSUBA_MAX+1);
+        else if (XIloc_PWr)
+            WrSubAddr <= (WrSubAddr +1) % (`XSUBA_MAX+1);
 
         if ((WBstate == WBin0) & isData) begin
-            XiLoc.PD  <= inData;
-            XiLoc.PWr <= 1'b1;
+            XIloc_PD  <= inData;
+            XIloc_PWr <= 1'b1;
         end
         else
-            XiLoc.PWr <= 1'b0;
+            XIloc_PWr <= 1'b0;
 
         WBstate <= nextState;
     end
+end
 
-assign XI <= XIloc;
+//assign XI <= XIloc;
 
-    
+assign XI_PWr         = XIloc_PWr        ;
+assign XI_PRWA        = XIloc_PRWA       ;
+assign XI_PRdFinished = XIloc_PRdFinished;
+assign XI_PRdSubA     = XIloc_PRdSubA    ;
+assign XI_PD          = XIloc_PD         ;
+
+   
 endmodule

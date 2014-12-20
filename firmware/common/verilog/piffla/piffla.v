@@ -28,9 +28,9 @@ endmodule
 // synthesis translate_off
 module OSCH (
 
-    input  stdby,
-    output osc,
-    output sedstdby
+    input  STDBY,
+    output OSC,
+    output SEDSTDBY
 );
 
 parameter NOM_FREQ = 2.08;
@@ -45,7 +45,7 @@ always begin
     #(NOM_FREQ) osc_clk = ~osc_clk;
 end
 
-assign osc = osc_clk;
+assign OSC = osc_clk;
 
 endmodule
 // synthesis translate_on
@@ -68,8 +68,9 @@ parameter B = 5;
 parameter FREQ_DIV = OSC_RATE/TICK_RATE;
 parameter TICK_LEN = FREQ_DIV 
 // synthesis translate_off
-    - FREQ_DIV + 8; // make sim reasonable!
+    - FREQ_DIV + 8 // make sim reasonable!
 // synthesis translate_on
+;
 parameter CLEN = numBits(TICK_LEN);
 
 wire [CLEN-1:0] DIV = TICK_LEN;
@@ -120,9 +121,9 @@ assign xclk = osc;
 
 OSCH #(.NOM_FREQ(OSC_STR)) i_OSCH (
 
-    /*input */ .stdby   (1'b0), // could use stdby signal
-    /*output*/ .osc     (osc ), 
-    /*output*/ .sedstdby(    )  // for sim, use stdby sed sig
+    /*input */ .STDBY   (1'b0), // could use stdby signal
+    /*output*/ .OSC     (osc ), 
+    /*output*/ .SEDSTDBY(    )  // for sim, use stdby sed sig
 );
 
 assign LoadN = Tick ? 0 : 1;
