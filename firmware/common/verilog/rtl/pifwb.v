@@ -1,4 +1,4 @@
-`include "./pifdefs.v"
+`include "pifdefs.v"
 
 module pifwb (
 
@@ -114,7 +114,7 @@ reg [`XSUBA_MAX:0] WrSubAddr;
 reg [2**`XA_BITS -1:0] rwAddr;
 reg [`I2C_DATA_BITS:0] inData;
 
-// XI interface 
+// Local XI registers 
 reg                                 XIloc_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
 reg  [2**`XA_BITS-1:0             ] XIloc_PRWA;        /*: TXA;          -- registered incoming addr bus        */
 reg                                 XIloc_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
@@ -132,7 +132,7 @@ wire wbRst = 1'b0
 // Power-Up Reset for 16 clocks
 // assumes initialisers are honoured by the synthesiser
 always @(posedge xclk) begin: reset_blk
-    rst_pipe <= {rst_pipe, 1'b0};
+    rst_pipe <= {rst_pipe[14:0], 1'b0};
 end
 
 //---------------------------------------------------------------------
@@ -140,7 +140,7 @@ end
 
 wire wbAck = (wbAck_o == 1'b1);
 
-reg [4:0] nextState;
+reg [3:0] nextState;
 reg vSlaveTransmitting;
 reg vTxRxRdy;
 reg vBusy;
@@ -351,9 +351,12 @@ end
 always @(posedge xclk) begin: wb_statemachine_blk_2
 
     if (rst) begin
-        rwAddr    <= 'd0;
-        RdSubAddr <= 'd0;
-        WrSubAddr <= 'd0;
+        rwAddr            <= 'd0;
+        RdSubAddr         <= 'd0;
+        WrSubAddr         <= 'd0;
+        XIloc_PD          <= 'd0;
+        XIloc_PWr         <= 'd0;
+        XIloc_PRdFinished <= 'd0;
     end 
     else begin 
 
@@ -382,6 +385,19 @@ always @(posedge xclk) begin: wb_statemachine_blk_2
         WBstate <= nextState;
     end
 end
+
+always @(posedge xclk) begin: wb_statemachine_blk_3
+
+    if (rst) begin
+        XIloc_PRWA    <= 'd0;
+        XIloc_PRdSubA <= 'd0;        
+    end
+    else begin
+        XIloc_PRWA    <= rwAddr;
+        XIloc_PRdSubA <= RdSubAddr;
+    end
+end
+
 
 //assign XI <= XIloc;
 

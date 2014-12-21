@@ -42,7 +42,7 @@ initial begin
 end
 
 always begin
-    #(NOM_FREQ) osc_clk = ~osc_clk;
+    #((1000/NOM_FREQ)/2) osc_clk = ~osc_clk;
 end
 
 assign OSC = osc_clk;

@@ -1,4 +1,4 @@
-`include "./pifdefs.v"
+`include "pifdefs.v"
 
 module flasher (
 
@@ -15,20 +15,17 @@ module flasher (
 );
 
 // Wires 
-wire xclk;
-wire red_flash;
-wire green_flash;
-wire slv8;
-wire XI;
-wire XO;
-wire GSRnX;
-wire MiscReg;
-
-wire                                 XI_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
-wire  [2**`XA_BITS-1:0             ] XI_PRWA;        /*: TXA;          -- registered incoming addr bus        */
-wire                                 XI_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
-wire  [`XSUBA_MAX   :0             ] XI_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
-wire  [7            :`I2C_TYPE_BITS] XI_PD;          /*: TwrData;      -- registered incoming data bus        */
+wire                                xclk;
+wire                                red_flash;
+wire                                green_flash;
+wire [7            :0             ] XO;
+wire                                GSRnX;
+wire [3            :0             ] MiscReg;
+wire                                XI_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
+wire [2**`XA_BITS-1:0             ] XI_PRWA;        /*: TXA;          -- registered incoming addr bus        */
+wire                                XI_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
+wire [`XSUBA_MAX   :0             ] XI_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
+wire [7            :`I2C_TYPE_BITS] XI_PD;          /*: TwrData;      -- registered incoming data bus        */
 
 // LED Flasher
 pif_flasher i_pif_flasher (
@@ -91,7 +88,7 @@ always @(*) begin : led_pattern_select_blk
             g = green_flash;
         end
 
-        default:
+        default: // Includes LED_OFF as well.
         begin
             r = 0;
             g = 0;

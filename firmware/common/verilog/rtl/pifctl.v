@@ -1,4 +1,4 @@
-`include "./pifdefs.v"
+`include "pifdefs.v"
 
 module pifctl (
 
@@ -18,14 +18,14 @@ module pifctl (
 );
 
 reg [7:`I2C_TYPE_BITS] ScratchReg   = `I2C_DATA_BITS'h15;
-reg [1:0             ] MiscRegLocal = `LED_SYNC;
+reg [3:0             ] MiscRegLocal = `LED_SYNC;
 
 always @(posedge xclk) begin: reg_write_blk
 
     if (XI_PWr) begin
 
         case(XI_PRWA)
-            `W_SCRATCH_REG: ScratchReg <= XI_PD;
+            `W_SCRATCH_REG: ScratchReg   <= XI_PD;
             `W_MISC_REG   : MiscRegLocal <= XI_PD;
             default:;
         endcase
@@ -39,13 +39,13 @@ reg [7               :0] subOut;
 reg [7               :0] regOut;
 reg [7               :0] IdReadback;
 reg [7               :0] XO;
-reg [2               :0] MiscReg;
+reg [3               :0] MiscReg;
 
 always @(posedge xclk) begin: wishbone_reg_readback_blk_1
 
-    IDscratch <= {2'b01, ScratchReg};
-    IDletter <= {4'd6, XI_PRdSubA}; // 61h='a'
-    subAddr <= XI_PRdSubA % `R_ID_NUM_SUBS;
+    IDscratch <= {2'b01, ScratchReg     };
+    IDletter  <= {4'd6 , XI_PRdSubA[3:0]}; // 61h='a'
+    subAddr   <= XI_PRdSubA % `R_ID_NUM_SUBS;
 end
 
 always @(posedge xclk) begin: wishbone_reg_readback_blk_2
@@ -68,9 +68,9 @@ end
 
 always @(posedge xclk) begin: wishbone_reg_readback_blk_4  
     
-    IdReadback <= regOut;
-    XO <= IdReadback;
-    MiscReg <= MiscRegLocal;
+    IdReadback <= regOut      ;
+    XO         <= IdReadback  ;
+    MiscReg    <= MiscRegLocal;
 end
 
 endmodule
