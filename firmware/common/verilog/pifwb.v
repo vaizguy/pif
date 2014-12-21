@@ -177,31 +177,73 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
             //-----------------------------------
             // initialise
             
-            WBstart: Wr(I2C1_CMDR, 'h04, WBinit1); // clock stretch disable
+            WBstart: 
+            begin
+                wbAddr    <= I2C1_CMDR;
+                wbDat_i   <= 8'h04;
+                rwReturn  <= WBinit1;
+                nextState <= WBwr;
+                // clock stretch disable
+            end
 
-            WBinit1: Rd(I2C1_SR, WBinit2);         // wait for not busy
+            WBinit1:
+            begin
+                wbAddr    <= I2C1_SR;
+                wbDat_i   <= 8'h0;
+                rwReturn  <= WBinit2;
+                nextState <= WBrd;
+                // wait for not busy
+            end
 
             WBinit2:
             begin
                 if (busy)
                     nextState <= WBrd;
-                else
-                    Rd(I2C1_RXDR, WBinit3);        // read and discard RXDR, #1
+                else begin
+                    wbAddr    <= I2C1_RXDR;
+                    wbDat_i   <= 8'h0;
+                    rwReturn  <= WBinit3;
+                    nextState <= WBrd;
+                    // read and discard RXDR, #1
+                end
             end
 
-            WBinit3: Rd(I2C1_RXDR, WBinit4);       // read and discard RXDR, #2
+            WBinit3:
+            begin
+                wbAddr    <= I2C1_RXDR;
+                wbDat_i   <= 8'h0;
+                rwReturn  <= WBinit4;
+                nextState <= WBrd;
+                // read and discard RXDR, #2
+            end
 
-            WBinit4: Wr(I2C1_CMDR, 'h00, WBidle);  // clock stretch enable
+            WBinit4: 
+            begin
+                wbAddr    <= I2C1_CMDR;
+                wbDat_i   <= 'h00;
+                rwReturn  <= WBidle;
+                nextState <= WBwr;
+                // clock stretch enable
+            end
 
             //-----------------------------------
             // wait for I2C activity - "busy" is signalled
 
             WBidle :
             begin
-                if (busy)
-                    Rd(I2C1_SR, WBwaitTR);
+                if (busy) begin
+                    wbAddr   <= I2C1_SR;
+                    wbDat_i  <= 8'h0;
+                    rwReturn <= WBwaitTR;
+                end
                 else
-                    Rd(I2C1_SR, WBidle);           // wait for I2C activity - "busy" is signalled
+                begin
+                    wbAddr   <= I2C1_SR;
+                    wbDat_i  <= 8'h0;
+                    rwReturn <= WBidle;
+                    // wait for I2C activity - "busy" is signalled
+                end
+                nextState <= WBrd;
             end
 
             //-----------------------------------
@@ -211,10 +253,18 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
             begin
                 if (lastTxNak)                      // last read?
                     nextState <= WBstart;
-                else if (txReady)
-                    Wr(I2C1_TXDR, XO, WBout0);
-                else if (rxReady) 
-                    Rd(I2C1_RXDR, WBin0);
+                else if (txReady) begin
+                    wbAddr    <= I2C1_TXDR;
+                    wbDat_i   <= XO;
+                    rwReturn  <= WBout0;
+                    nextState <= WBwr;
+                end
+                else if (rxReady) begin
+                    wbAddr    <= I2C1_RXDR;
+                    wbDat_i   <= 8'h0;
+                    rwReturn  <= WBin0;
+                    nextState <= WBrd;
+                end
                 else if (!busy)
                     nextState <= WBstart;
                 else
