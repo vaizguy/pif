@@ -33,7 +33,7 @@ module OSCH (
     output SEDSTDBY
 );
 
-parameter NOM_FREQ = 2.08;
+parameter NOM_FREQ = 26.6;
 
 reg osc_clk;
 
@@ -100,10 +100,10 @@ end
 
 always @(posedge osc) begin : Accum_blk
     if (Tick)
-        Accum <= 'd0;
+        Accum <= {B{1'b0}};
     else begin
-        Acc <= 'b0 & Accum[B-1:0];
-        Delt <= 'b0 & Delta;
+        Acc <= {1'b0, Accum[B-1:0]};
+        Delt <= {1'b0, Delta};
         Accum <= Acc + Delt;
     end
 end
@@ -111,8 +111,8 @@ end
 always @(posedge osc) begin : LED_trigg_blk
     
     LedOn <= (Accum[B] == 1'b1);
-    R <= !(to_sl(((LedPhase==0) & LedOn) | ((LedPhase==1) & !LedOn)));
-    G <= !(to_sl(((LedPhase==2) & LedOn) | ((LedPhase==3) & !LedOn)));
+    R <= !((LedPhase==0) & LedOn) | ((LedPhase==1) & !LedOn));
+    G <= !((LedPhase==2) & LedOn) | ((LedPhase==3) & !LedOn));
 end
 
 assign red = R;
@@ -136,13 +136,6 @@ DownCounter #(.BITS(CLEN)) i_DownCounter (
     /*input  [BITS-1:0]*/ .InitialVal(DIV  ),
     /*output           */ .zero      (Tick ) 
 );
-
-function to_sl (input b);
-
-    begin
-        to_sl = b ? 1'b1 : 1'b0;
-    end        
-endfunction
 
 function [31:0] numBits (input arg);
 
