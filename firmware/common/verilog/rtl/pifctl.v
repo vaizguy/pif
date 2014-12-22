@@ -12,9 +12,9 @@ module pifctl (
     input [`XSUBA_MAX   :0             ] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
     input [7            :`I2C_TYPE_BITS] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
 
-    output [7:0] XO     ,
+    output reg [7:0] XO     ,
     
-    output [2:0] MiscReg
+    output reg [3:0] MiscReg
 );
 
 reg [7:`I2C_TYPE_BITS] ScratchReg   = `I2C_DATA_BITS'h15;
@@ -38,8 +38,6 @@ reg [7               :0] IDletter;
 reg [7               :0] subOut;
 reg [7               :0] regOut;
 reg [7               :0] IdReadback;
-reg [7               :0] XO;
-reg [3               :0] MiscReg;
 
 always @(posedge xclk) begin: wishbone_reg_readback_blk_1
 

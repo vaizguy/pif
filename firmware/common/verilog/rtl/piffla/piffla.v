@@ -86,7 +86,6 @@ reg R;
 reg G;
 reg [B:0] Accum;
 reg [B+1:0] DeltaReg;
-
 reg [B:0] Acc;
 reg [B:0] Delt;
 
@@ -111,8 +110,8 @@ end
 always @(posedge osc) begin : LED_trigg_blk
     
     LedOn <= (Accum[B] == 1'b1);
-    R <= !((LedPhase==0) & LedOn) | ((LedPhase==1) & !LedOn));
-    G <= !((LedPhase==2) & LedOn) | ((LedPhase==3) & !LedOn));
+    R <= !(((LedPhase==0) & LedOn) | ((LedPhase==1) & !LedOn));
+    G <= !(((LedPhase==2) & LedOn) | ((LedPhase==3) & !LedOn));
 end
 
 assign red = R;

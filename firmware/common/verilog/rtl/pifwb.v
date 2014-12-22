@@ -84,10 +84,41 @@ wire wbAck_o;
 reg [3:0] WBstate;
 reg [3:0] rwReturn;
 
-// quasi-static data out from the USB
+reg hitI2CSR;
+reg hitI2CRXDR;
+reg hitCFGRXDR;
+reg cfgBusy;
+reg [`XSUBA_MAX:0] RdSubAddr;
+reg [`XSUBA_MAX:0] WrSubAddr;
+reg [2**`XA_BITS -1:0] rwAddr;
+reg [`I2C_DATA_BITS:0] inData;
+
+// Local XI registers 
 //XIrec XIloc;
+reg                                 XIloc_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
+reg  [2**`XA_BITS-1:0             ] XIloc_PRWA;        /*: TXA;          -- registered incoming addr bus        */
+reg                                 XIloc_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
+reg  [`XSUBA_MAX   :0             ] XIloc_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
+reg  [7            :`I2C_TYPE_BITS] XIloc_PD;          /*: TwrData;      -- registered incoming data bus        */
+
+
+// quasi-static data out from the USB
 reg [15:0] rst_pipe = 16'hffff;
 wire rst = rst_pipe[15];
+
+//---------------------------------------------------------------------
+// Power-Up Reset for 16 clocks
+// assumes initialisers are honoured by the synthesiser
+always @(posedge xclk) begin: reset_blk
+    rst_pipe <= {rst_pipe[14:0], 1'b0};
+end
+
+// used in debug mode to reset the internal 16-bit counters
+wire wbRst = 1'b0
+// synthesis translate_off
+               | rst
+// synthesis translate_on
+;
 
 // Embedded function block (EFB)
 efb myEFB (
@@ -104,36 +135,6 @@ efb myEFB (
     .i2c1_sda (i2c_SDA), 
     .i2c1_irqo(       )
 );
-
-reg hitI2CSR;
-reg hitI2CRXDR;
-reg hitCFGRXDR;
-reg cfgBusy;
-reg [`XSUBA_MAX:0] RdSubAddr;
-reg [`XSUBA_MAX:0] WrSubAddr;
-reg [2**`XA_BITS -1:0] rwAddr;
-reg [`I2C_DATA_BITS:0] inData;
-
-// Local XI registers 
-reg                                 XIloc_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
-reg  [2**`XA_BITS-1:0             ] XIloc_PRWA;        /*: TXA;          -- registered incoming addr bus        */
-reg                                 XIloc_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
-reg  [`XSUBA_MAX   :0             ] XIloc_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
-reg  [7            :`I2C_TYPE_BITS] XIloc_PD;          /*: TwrData;      -- registered incoming data bus        */
-
-// used in debug mode to reset the internal 16-bit counters
-wire wbRst = 1'b0
-// synthesis translate_off
-               | rst
-// synthesis translate_on
-;
-
-//---------------------------------------------------------------------
-// Power-Up Reset for 16 clocks
-// assumes initialisers are honoured by the synthesiser
-always @(posedge xclk) begin: reset_blk
-    rst_pipe <= {rst_pipe[14:0], 1'b0};
-end
 
 //---------------------------------------------------------------------
 // wishbone state machine
