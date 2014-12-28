@@ -80,6 +80,7 @@ PIF_API int  pifMcpRead(pifHandle h, int reg, uint8_t* v);
 //---------------------
 PIF_API int  pifAppRead(pifHandle h, uint8_t *p, int AnumBytes);
 PIF_API int  pifAppWrite(pifHandle h, uint8_t *p, int AnumBytes);
+PIF_API int  pifAppWriteRead(pifHandle h, uint8_t *pw, uint8_t *pr, int AnumBytes);
 
 PIF_API pifHandle pifInit();
 PIF_API void      pifClose(pifHandle h);
