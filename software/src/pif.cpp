@@ -466,6 +466,16 @@ bool Tpif::appWrite(uint8_t *p, int AnumBytes) {
   }
 
 //---------------------------------------------------------------------
+bool Tpif::appWriteRead(uint8_t *pw, uint8_t *pr, int AnumBytes) {
+  if (AnumBytes <= 0)
+    return true;
+
+  assert(pw != 0);
+
+  return pLo->i2cWriteRead(I2C_APP_ADDR, pw, pr, AnumBytes);
+  }
+
+//---------------------------------------------------------------------
 Tpif::Tpif() {
   pLo = new TlowLevel;
   }

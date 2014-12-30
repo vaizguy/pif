@@ -111,6 +111,9 @@ int pifAppRead(pifHandle h, uint8_t *p, int AnumBytes) {
 int pifAppWrite(pifHandle h, uint8_t *p, int AnumBytes) {
   return pPif->appWrite(p, AnumBytes);
   }
+int pifAppWriteRead(pifHandle h, uint8_t *pw, uint8_t *pr, int AnumBytes) {
+  return pPif->appWriteRead(pw, pr, AnumBytes);
+  }
 
 pifHandle pifInit() {
   return (pifHandle)(new Tpif());

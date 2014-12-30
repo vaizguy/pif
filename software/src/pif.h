@@ -85,6 +85,7 @@ class Tpif {
     //---------------------
     bool appRead(uint8_t *p, int AnumBytes);
     bool appWrite(uint8_t *p, int AnumBytes);
+    bool appWriteRead(uint8_t *pw, uint8_t *pr, int AnumBytes);
 
     Tpif();
     ~Tpif();
