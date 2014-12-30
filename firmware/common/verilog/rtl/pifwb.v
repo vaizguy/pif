@@ -15,7 +15,9 @@ module pifwb (
     output  [`XSUBA_MAX   :0             ] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
     output  [7            :`I2C_TYPE_BITS] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
 
-    input [7:0] XO
+    input [7:0] XO,
+
+    input sys_rst
 );
 
 // WB state machine encoding 
@@ -103,14 +105,18 @@ reg  [7            :`I2C_TYPE_BITS] XIloc_PD;          /*: TwrData;      -- regi
 
 
 // quasi-static data out from the USB
-reg [15:0] rst_pipe = 16'hffff;
+reg [15:0] rst_pipe;
 wire rst = rst_pipe[15];
 
 //---------------------------------------------------------------------
 // Power-Up Reset for 16 clocks
 // assumes initialisers are honoured by the synthesiser
-always @(posedge xclk) begin: reset_blk
-    rst_pipe <= {rst_pipe[14:0], 1'b0};
+always @(posedge xclk or negedge sys_rst) begin: reset_blk
+
+    if (!sys_rst)
+        rst_pipe <= 16'hffff;
+    else
+        rst_pipe <= {rst_pipe[14:0], 1'b0};
 end
 
 // used in debug mode to reset the internal 16-bit counters

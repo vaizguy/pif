@@ -15,7 +15,7 @@ always @(posedge Clk) begin: Ctr_gen_blk
 
     if (CE == 1'b1) begin
         if (LoadN == 1'b0)
-            Ctr <= 'b0 & InitialVal;
+            Ctr <= {1'b0, InitialVal};
         else
             Ctr <= Ctr - 1'd1;
     end
@@ -57,7 +57,10 @@ module pif_flasher (
     output green,
 
     // LED clock
-    output xclk
+    output xclk,
+
+    // system reset
+    input sys_rst
 );
 
 parameter FREQ = 2.08;
@@ -92,13 +95,22 @@ reg [B:0] Delt;
 assign Delta = DeltaReg[B-1:0];
 assign LedPhase = DeltaReg[B+1:B];
 
-always @(posedge osc) begin : DeltaReg_cnt_blk
-    if (Tick)
+always @(posedge osc or negedge sys_rst) begin : DeltaReg_cnt_blk
+
+    if (!sys_rst)
+        DeltaReg <= 'd0;
+    else if (Tick)
         DeltaReg <= DeltaReg + 1'd1;
 end
 
-always @(posedge osc) begin : Accum_blk
-    if (Tick)
+always @(posedge osc or negedge sys_rst) begin : Accum_blk
+    
+    if (!sys_rst)  begin
+        Accum <= 'd0;
+        Acc   <= 'd0;
+        Delt  <= 'd0;
+    end
+    else if (Tick)
         Accum <= {B{1'b0}};
     else begin
         Acc <= {1'b0, Accum[B-1:0]};
@@ -107,18 +119,29 @@ always @(posedge osc) begin : Accum_blk
     end
 end
 
-always @(posedge osc) begin : LED_trigg_blk
+always @(posedge osc or negedge sys_rst) begin : LED_trigg_blk
     
-    LedOn <= (Accum[B] == 1'b1);
-    R <= !(((LedPhase==0) & LedOn) | ((LedPhase==1) & !LedOn));
-    G <= !(((LedPhase==2) & LedOn) | ((LedPhase==3) & !LedOn));
+    if (!sys_rst) begin
+        LedOn <= 'd0;
+        R     <= 'd0;
+        G     <= 'd0;
+    end
+    else begin
+        LedOn <= (Accum[B] == 1'b1);
+        R <= !(((LedPhase==0) & LedOn) | ((LedPhase==1) & !LedOn));
+        G <= !(((LedPhase==2) & LedOn) | ((LedPhase==3) & !LedOn));
+    end
 end
 
 assign red = R;
 assign green = G;
 assign xclk = osc;
 
-OSCH #(.NOM_FREQ(OSC_STR)) i_OSCH (
+OSCH 
+// synthesis translate_off
+#(.NOM_FREQ(OSC_STR)) 
+// synthesis translate_on
+i_OSCH (
 
     /*input */ .STDBY   (1'b0), // could use stdby signal
     /*output*/ .OSC     (osc ), 

@@ -14,15 +14,21 @@ module pifctl (
 
     output reg [7:0] XO     ,
     
-    output reg [3:0] MiscReg
+    output reg [3:0] MiscReg,
+
+    input sys_rst
 );
 
 reg [7:`I2C_TYPE_BITS] ScratchReg   = `I2C_DATA_BITS'h15;
 reg [3:0             ] MiscRegLocal = `LED_SYNC;
 
-always @(posedge xclk) begin: reg_write_blk
+always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
 
-    if (XI_PWr) begin
+    if (!sys_rst) begin
+        ScratchReg   <= 'd0;
+        MiscRegLocal <= 'd0;
+    end
+    else if (XI_PWr) begin
 
         case(XI_PRWA)
             `W_SCRATCH_REG: ScratchReg   <= XI_PD;
@@ -39,36 +45,57 @@ reg [7               :0] subOut;
 reg [7               :0] regOut;
 reg [7               :0] IdReadback;
 
-always @(posedge xclk) begin: wishbone_reg_readback_blk_1
+always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_1
 
-    IDscratch <= {2'b01, ScratchReg     };
-    IDletter  <= {4'd6 , XI_PRdSubA[3:0]}; // 61h='a'
-    subAddr   <= XI_PRdSubA % `R_ID_NUM_SUBS;
+    if (!sys_rst) begin
+        IDscratch <= 'd0;
+        IDletter  <= 'd0;
+        subAddr   <= 'd0;
+    end
+    else begin
+        IDscratch <= {2'b01, ScratchReg     };
+        IDletter  <= {4'd6 , XI_PRdSubA[3:0]}; // 61h='a'
+        subAddr   <= XI_PRdSubA % `R_ID_NUM_SUBS;
+    end
 end
 
-always @(posedge xclk) begin: wishbone_reg_readback_blk_2
+always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_2
 
-    case (1)
-        (subAddr == `R_ID_ID     ): subOut <= `ID;
-        (subAddr == `R_ID_SCRATCH): subOut <= IDscratch;
-        (subAddr == `R_ID_MISC   ): subOut <= {4'd5, MiscRegLocal}; // 50h='P'
-        default: subOut <= IDletter;
-    endcase
+    if (!sys_rst) begin
+        subOut <= 'd0;
+    end
+    else begin
+        case (1)
+            (subAddr == `R_ID_ID     ): subOut <= `ID;
+            (subAddr == `R_ID_SCRATCH): subOut <= IDscratch;
+            (subAddr == `R_ID_MISC   ): subOut <= {4'd5, MiscRegLocal}; // 50h='P'
+            default: subOut <= IDletter;
+        endcase
+    end
 end
 
-always @(posedge xclk) begin: wishbone_reg_readback_blk_3
+always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_3
 
-    if (XI_PRWA == `R_ID)
+    if (!sys_rst)
+        regOut <= 8'd0;
+    else if (XI_PRWA == `R_ID)
         regOut <= subOut;
     else
         regOut <= 8'd0;
 end
 
-always @(posedge xclk) begin: wishbone_reg_readback_blk_4  
+always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4  
     
-    IdReadback <= regOut      ;
-    XO         <= IdReadback  ;
-    MiscReg    <= MiscRegLocal;
+    if (!sys_rst) begin
+        IdReadback <= 'd0;
+        XO         <= 'd0;
+        MiscReg    <= 'd0;
+    end
+    else begin
+        IdReadback <= regOut      ;
+        XO         <= IdReadback  ;
+        MiscReg    <= MiscRegLocal;
+    end
 end
 
 endmodule

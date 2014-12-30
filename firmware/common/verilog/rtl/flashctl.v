@@ -30,9 +30,10 @@ wire [7            :`I2C_TYPE_BITS] XI_PD;          /*: TwrData;      -- registe
 // LED Flasher
 pif_flasher i_pif_flasher (
     
-    /*output*/ .red   (red_flash  ),
-    /*output*/ .green (green_flash),
-    /*output*/ .xclk  (xclk       )
+    /*output*/ .red    (red_flash  ),
+    /*output*/ .green  (green_flash),
+    /*output*/ .xclk   (xclk       ),
+    /*input */ .sys_rst(GSRnX      )
 );
 
 // Wishbone interface
@@ -50,7 +51,9 @@ pifwb i_pifwb (
                .XI_PRdSubA    (XI_PRdSubA    ),    
                .XI_PD         (XI_PD         ),         
 
-    /*input */ .XO      (XO  )
+    /*input */ .XO      (XO   ),
+    
+    /*input */ .sys_rst (GSRnX)
 );
 
 // Control logic
@@ -67,7 +70,9 @@ pifctl i_pifctl(
 
     /*output*/ .XO      (XO     ),
       
-    /*output*/ .MiscReg (MiscReg)
+    /*output*/ .MiscReg (MiscReg),
+
+    /*input */ .sys_rst (GSRnX  )
 );
 
 reg r, g;
