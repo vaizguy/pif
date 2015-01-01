@@ -87,14 +87,13 @@ def sendDataByte(handle, v):
     cmdLength = 1
     wbuff = create_string_buffer(chr(DATA_MASK | v), cmdLength)
     rbuff = create_string_buffer(cmdLength)
-    ptr_rbuff = pointer(rbuff)
     
     numWritten = c_ulong(0)
     numToRead  = c_ulong(2)
 
     #res = pifglobs.pif.pifAppWriteRead(handle, wbuff, rbuff, cmdLength, byref(numWritten))
     res = pifglobs.pif.pifAppWrite(handle, wbuff, cmdLength, byref(numWritten))
-    res = pifglobs.pif.pifAppRead(handle, ptr_rbuff, cmdLength, byref(numToRead))
+    res = pifglobs.pif.pifAppRead(handle, byref(rbuff), cmdLength, byref(numToRead))
 
   except:
     print('FAILED: data byte send')
