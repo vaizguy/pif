@@ -19,6 +19,7 @@ import sys, web, ctypes, pifglobs
 from web      import form
 from ctypes   import *
 from pifglobs import *
+import traceback
 
 ##---------------------------------------------------------
 def showDeviceID(handle):
@@ -63,25 +64,51 @@ def showDeviceID(handle):
 def sendAddressByte(handle, a):
   try:
     cmdLength = 1
-    buff = create_string_buffer(chr(ADDRESS_MASK | a), cmdLength)
+    wbuff = create_string_buffer(chr(ADDRESS_MASK | a), cmdLength)
+    rbuff = create_string_buffer(cmdLength)
+    
     numWritten = c_ulong(0)
-    res = pifglobs.pif.pifAppWrite(handle, buff, cmdLength, byref(numWritten))
+    numToRead  = c_ulong(2)
+
+    #res = pifglobs.pif.pifAppWriteRead(handle, wbuff, rbuff, cmdLength, byref(numWritten))
+    res = pifglobs.pif.pifAppWrite(handle, wbuff, cmdLength, byref(numWritten))
+    res = pifglobs.pif.pifAppRead(handle, byref(rbuff), cmdLength, byref(numToRead))
+
   except:
+    traceback.print_exc()
     print('FAILED: address byte send')
+  else:
+    print'Debug waddr: {} {}, raddr: {} {}'.format(sizeof(wbuff), repr(wbuff.raw), sizeof(rbuff), repr(rbuff.raw))
+    print numToRead, numWritten
 
 ##---------------------------------------------------------
 def sendDataByte(handle, v):
   try:
     cmdLength = 1
-    buff = create_string_buffer(chr(DATA_MASK | v), cmdLength)
+    wbuff = create_string_buffer(chr(DATA_MASK | v), cmdLength)
+    rbuff = create_string_buffer(cmdLength)
+    ptr_rbuff = pointer(rbuff)
+    
     numWritten = c_ulong(0)
-    res = pifglobs.pif.pifAppWrite(handle, buff, cmdLength, byref(numWritten))
+    numToRead  = c_ulong(2)
+
+    #res = pifglobs.pif.pifAppWriteRead(handle, wbuff, rbuff, cmdLength, byref(numWritten))
+    res = pifglobs.pif.pifAppWrite(handle, wbuff, cmdLength, byref(numWritten))
+    res = pifglobs.pif.pifAppRead(handle, ptr_rbuff, cmdLength, byref(numToRead))
+
   except:
     print('FAILED: data byte send')
+  else:
+    print'Debug wbyte: {} {}, rdbyte: {} {}'.format(sizeof(wbuff), repr(wbuff.raw), sizeof(rbuff), repr(rbuff.raw))
+    print numToRead, numWritten
 
 ##---------------------------------------------------------
 # write val into the Misc register inside the FPGA
 def setMiscRegister(val):
+
+  # NOTE added by Arun
+  print "Value: {}, Address Mask: {}, Data Mask: {}, Misc Reg: {}".format(val, ADDRESS_MASK, DATA_MASK, W_MISC_REG)
+
   try:
     sendAddressByte(pifglobs.handle, W_MISC_REG)
     sendDataByte(pifglobs.handle, val)
