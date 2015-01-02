@@ -1,9 +1,10 @@
 
-module DownCounter (Clk, LoadN, CE, InitialVal, zero);
+module DownCounter (Clk, sys_rst, LoadN, CE, InitialVal, zero);
 
 parameter BITS = 10;
 
 input             Clk;
+input             sys_rst;
 input             LoadN;
 input             CE;
 input  [BITS-1:0] InitialVal;
@@ -11,9 +12,11 @@ output            zero;
 
 reg [BITS:0] Ctr;
 
-always @(posedge Clk) begin: Ctr_gen_blk
+always @(posedge Clk or negedge sys_rst) begin: Ctr_gen_blk
 
-    if (CE == 1'b1) begin
+    if (!sys_rst) 
+        Ctr <= 'd0;
+    else if (CE == 1'b1) begin
         if (LoadN == 1'b0)
             Ctr <= {1'b0, InitialVal};
         else
@@ -152,11 +155,12 @@ assign LoadN = Tick ? 0 : 1;
 
 DownCounter #(.BITS(CLEN)) i_DownCounter (
 
-    /*input            */ .Clk       (osc  ),
-    /*input            */ .LoadN     (LoadN),
-    /*input            */ .CE        (1'b1 ),
-    /*input  [BITS-1:0]*/ .InitialVal(DIV  ),
-    /*output           */ .zero      (Tick ) 
+    /*input            */ .Clk       (osc    ),
+    /*input            */ .sys_rst   (sys_rst),
+    /*input            */ .LoadN     (LoadN  ),
+    /*input            */ .CE        (1'b1   ),
+    /*input  [BITS-1:0]*/ .InitialVal(DIV    ),
+    /*output           */ .zero      (Tick   ) 
 );
 
 function [31:0] numBits (input arg);
