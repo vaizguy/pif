@@ -1,7 +1,8 @@
 
 module piffla_tb;
 
-wire red, green, xclk;
+wire red, green, xclk, sys_rst;
+reg  rst;
 
 pif_flasher i_pif_flasher(
 
@@ -10,16 +11,26 @@ pif_flasher i_pif_flasher(
     /*output*/ .green(green),
 
     // LED clock
-    /*output*/ .xclk(xclk)
+    /*output*/ .xclk(xclk),
+   
+    // system reset
+    /*input*/  .sys_rst(sys_rst)
 );
+
+assign sys_rst = rst;
 
 initial begin
     #0;
-    $deposit(i_pif_flasher.R, 1'b0);
-    $deposit(i_pif_flasher.G, 1'b0);
-    $deposit(i_pif_flasher.LedOn, 1'b0);
-    $deposit(i_pif_flasher.DeltaReg, 1'b0);
-    $deposit(i_pif_flasher.i_DownCounter.Ctr, 1'b0);
+    //$deposit(i_pif_flasher.R, 1'b0);
+    //$deposit(i_pif_flasher.G, 1'b0);
+    //$deposit(i_pif_flasher.LedOn, 1'b0);
+    //$deposit(i_pif_flasher.DeltaReg, 1'b0);
+    //$deposit(i_pif_flasher.i_DownCounter.Ctr, 1'b0);
+    rst = 1'b1;
+    #100;
+    rst = 1'b0;
+    #100;
+    rst = 1'b1;
 end
 
 initial begin
