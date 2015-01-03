@@ -68,7 +68,7 @@ def sendAddressByte(handle, a):
     rbuff = create_string_buffer(cmdLength)
     
     numWritten = c_ulong(0)
-    numToRead  = c_ulong(2)
+    numToRead  = c_ulong(0)
 
     #res = pifglobs.pif.pifAppWriteRead(handle, wbuff, rbuff, cmdLength, byref(numWritten))
     res = pifglobs.pif.pifAppWrite(handle, wbuff, cmdLength, byref(numWritten))
@@ -88,7 +88,7 @@ def sendDataByte(handle, v):
     rbuff = create_string_buffer(cmdLength)
     
     numWritten = c_ulong(0)
-    numToRead  = c_ulong(2)
+    numToRead  = c_ulong(0)
 
     #res = pifglobs.pif.pifAppWriteRead(handle, wbuff, rbuff, cmdLength, byref(numWritten))
     res = pifglobs.pif.pifAppWrite(handle, wbuff, cmdLength, byref(numWritten))
