@@ -66,7 +66,7 @@ module pif_flasher (
     input sys_rst
 );
 
-parameter SIM_OSC_STR = 2.08;
+parameter SIM_OSC_STR = 2.08; // Using 2MHz for simulation purposes
 parameter OSC_STR = 26.6
 // synthesis translate_off
     -26.6 + SIM_OSC_STR
@@ -158,10 +158,7 @@ assign red = R;
 assign green = G;
 assign xclk = osc;
 
-OSCH 
-// synthesis translate_off
-#(.NOM_FREQ(OSC_STR)) 
-// synthesis translate_on
+OSCH  #(.NOM_FREQ(OSC_STR)) 
 i_OSCH (
 
     /*input */ .STDBY   (1'b0), // could use stdby signal
