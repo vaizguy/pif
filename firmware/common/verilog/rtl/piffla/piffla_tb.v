@@ -48,7 +48,7 @@ initial begin
 `endif
     #999999;
     $display($time,"TEST EXECUTION FINISHED!");
-    #1000000 $stop();
+    #2000000 $stop();
 end
 
 

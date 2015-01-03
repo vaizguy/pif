@@ -9,11 +9,11 @@ module pifwb (
 
     //XIrec       XI     , // works only with sv
 
-    output                                 XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
-    output  [2**`XA_BITS-1:0             ] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
-    output                                 XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
-    output  [`XSUBA_MAX   :0             ] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
-    output  [7            :`I2C_TYPE_BITS] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
+    output                       XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
+    output  [`TXA            :0] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
+    output                       XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
+    output  [`TXSubA         :0] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
+    output  [`I2C_DATA_BITS-1:0] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
 
     input [7:0] XO,
 
@@ -65,6 +65,7 @@ parameter [7:0]  CFG_IRQ    = 8'h74;
 parameter [7:0]  CFG_IRQEN  = 8'h75;
 
 wire [7:0] wbDat_o;
+wire wbAck_o;
 
 reg [7:0] wbDat_i;
 reg [7:0] wbAddr;
@@ -81,27 +82,25 @@ reg wbCyc;
 reg wbStb;
 reg wbWe;
 
-wire wbAck_o;
-
 reg [3:0] WBstate;
 reg [3:0] rwReturn;
 
-reg hitI2CSR;
-reg hitI2CRXDR;
-reg hitCFGRXDR;
-reg cfgBusy;
-reg [`XSUBA_MAX:0] RdSubAddr;
-reg [`XSUBA_MAX:0] WrSubAddr;
-reg [2**`XA_BITS -1:0] rwAddr;
-reg [`I2C_DATA_BITS:0] inData;
+reg                      hitI2CSR;
+reg                      hitI2CRXDR;
+reg                      hitCFGRXDR;
+reg                      cfgBusy;
+reg [`TXSubA         :0] RdSubAddr;
+reg [`TXSubA         :0] WrSubAddr;
+reg [`TXA            :0] rwAddr;
+reg [`I2C_DATA_BITS-1:0] inData;
 
 // Local XI registers 
 //XIrec XIloc;
-reg                                 XIloc_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
-reg  [2**`XA_BITS-1:0             ] XIloc_PRWA;        /*: TXA;          -- registered incoming addr bus        */
-reg                                 XIloc_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
-reg  [`XSUBA_MAX   :0             ] XIloc_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
-reg  [7            :`I2C_TYPE_BITS] XIloc_PD;          /*: TwrData;      -- registered incoming data bus        */
+reg                       XIloc_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
+reg  [`TXA            :0] XIloc_PRWA;        /*: TXA;          -- registered incoming addr bus        */
+reg                       XIloc_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
+reg  [`TXSubA         :0] XIloc_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
+reg  [`I2C_DATA_BITS-1:0] XIloc_PD;          /*: TwrData;      -- registered incoming data bus        */
 
 
 // quasi-static data out from the USB
@@ -148,20 +147,27 @@ efb myEFB (
 wire wbAck = (wbAck_o == 1'b1);
 
 reg [3:0] nextState;
-reg vSlaveTransmitting;
-reg vTxRxRdy;
-reg vBusy;
-reg vTIP;
-reg vRARC;
-reg vTROE;
+reg       vSlaveTransmitting;
+reg       vTxRxRdy;
+reg       vBusy;
+reg       vTIP;
+reg       vRARC;
+reg       vTROE;
 reg [7:0] vInst;
 
 
-always @(posedge xclk) begin: wb_i2c_blk
+always @(posedge xclk or negedge sys_rst) begin: wb_i2c_blk
 
-    hitI2CSR   <= (wbAddr == I2C1_SR  );
-    hitI2CRXDR <= (wbAddr == I2C1_RXDR);
-    hitCFGRXDR <= (wbAddr == CFG_RXDR );
+    if(!sys_rst) begin
+        hitI2CSR   <= 1'b0;
+        hitI2CRXDR <= 1'b0; 
+        hitCFGRXDR <= 1'b0; 
+    end
+    else begin
+        hitI2CSR   <= (wbAddr == I2C1_SR  );
+        hitI2CRXDR <= (wbAddr == I2C1_RXDR);
+        hitCFGRXDR <= (wbAddr == CFG_RXDR );
+    end
 end
     
 always @(posedge xclk) begin: wb_statemachine_blk_1
@@ -313,9 +319,9 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                         busy      <= vBusy;
                     end 
                     else if (hitI2CRXDR) begin
-                        isAddr  <= (wbDat_o[7:`I2C_DATA_BITS] == `A_ADDR);
-                        isData  <= (wbDat_o[7:`I2C_DATA_BITS] == `D_ADDR);
-                        inData  <=  wbDat_o[7:`I2C_DATA_BITS];
+                        isAddr  <= (wbDat_o[7:`I2C_TYPE_BITS] == `A_ADDR);
+                        isData  <= (wbDat_o[7:`I2C_TYPE_BITS] == `D_ADDR);
+                        inData  <=  wbDat_o[`I2C_DATA_BITS-1:0];
                     end
                     else if (hitCFGRXDR) begin
                         cfgBusy <= (wbDat_o[7] == 1'b1);
@@ -355,6 +361,15 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
     end
 end
 
+always @(posedge xclk) begin: wb_sm_xiloc_prdfinished_blk
+
+    if (rst)
+        XIloc_PRdFinished <= 'd0;
+    else
+        XIloc_PRdFinished <= (WBstate == WBout0);
+
+end
+
 always @(posedge xclk) begin: wb_statemachine_blk_2
 
     if (rst) begin
@@ -363,14 +378,11 @@ always @(posedge xclk) begin: wb_statemachine_blk_2
         WrSubAddr         <= 'd0;
         XIloc_PD          <= 'd0;
         XIloc_PWr         <= 'd0;
-        XIloc_PRdFinished <= 'd0;
     end 
     else begin 
 
-        XIloc_PRdFinished <= (WBstate == WBout0);
-
         if ((WBstate == WBin0) & isAddr)
-            rwAddr <= inData[`XA_BITS-1:0];
+            rwAddr <= inData[`TXARange];
 
         if ((WBstate == WBin0) & isAddr)
             RdSubAddr <= 'd0;
@@ -389,8 +401,15 @@ always @(posedge xclk) begin: wb_statemachine_blk_2
         else
             XIloc_PWr <= 1'b0;
 
-        WBstate <= nextState;
     end
+end
+
+always @(posedge xclk) begin: wb_sm_wbstate
+
+    if (rst)
+        WBstate <= WBstart;
+    else
+        WBstate <= nextState;
 end
 
 always @(posedge xclk) begin: wb_statemachine_blk_3

@@ -6,27 +6,27 @@ module pifctl (
 
     //XIrec        XI     ,
 
-    input                                XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
-    input [2**`XA_BITS-1:0             ] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
-    input                                XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
-    input [`XSUBA_MAX   :0             ] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
-    input [7            :`I2C_TYPE_BITS] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
+    input                      XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
+    input [`TXA            :0] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
+    input                      XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
+    input [`TXSubA         :0] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
+    input [`I2C_DATA_BITS-1:0] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
 
     output reg [7:0] XO     ,
     
-    output reg [3:0] MiscReg,
+    output reg [1:0] MiscReg,
 
     input sys_rst
 );
 
-reg [7:`I2C_TYPE_BITS] ScratchReg   = `I2C_DATA_BITS'h15;
-reg [3:0             ] MiscRegLocal = `LED_SYNC;
+reg [`I2C_DATA_BITS-1:0] ScratchReg;
+reg [               1:0] MiscRegLocal;
 
 always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
 
     if (!sys_rst) begin
-        ScratchReg   <=  'd0;
-        MiscRegLocal <= 4'd0;
+        ScratchReg   <= `I2C_DATA_BIT'h15;
+        MiscRegLocal <= `LED_ALTERNATING;  // Default is alternating LEDs
     end
     else if (XI_PWr) begin
 
@@ -65,10 +65,10 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_2
         subOut <= 8'd0;
     end
     else begin
-        case (1)
-            (subAddr == `R_ID_ID     ): subOut <= `ID;
-            (subAddr == `R_ID_SCRATCH): subOut <= IDscratch;
-            (subAddr == `R_ID_MISC   ): subOut <= {4'd5, MiscRegLocal}; // 50h='P'
+        case (subAddr)
+            `R_ID_ID     : subOut <= `ID;
+            `R_ID_SCRATCH: subOut <= IDscratch;
+            `R_ID_MISC   : subOut <= {4'd5, 2'd0, MiscRegLocal}; // 50h='P'
             default: subOut <= IDletter;
         endcase
     end
