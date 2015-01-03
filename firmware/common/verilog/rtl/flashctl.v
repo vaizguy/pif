@@ -90,7 +90,7 @@ always @(*) begin : led_pattern_select_blk
         (MiscReg==`LED_SYNC):
         begin
             r = red_flash;
-            g = green_flash;
+            g = red_flash;
         end
 
         default: // Includes LED_OFF as well.
