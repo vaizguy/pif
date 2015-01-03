@@ -39,13 +39,16 @@ initial begin
 `ifdef DUMP_FSDB
     $fsdbAutoSwitchDumpfile(500, "piffla_tb.fsdb", 10);
     $fsdbDumpvars(0,piffla_tb); 
-`else
+`elsif DUMP_IRUN
     $recordfile("piffla_tb","incsize=500");
     $recordvars();
+`else
+    $dumpfile("piffla_vsim");
+    $dumpvars();
 `endif
-    #999;
+    #999999;
     $display($time,"TEST EXECUTION FINISHED!");
-    #1000us $finish();
+    #1000000 $stop();
 end
 
 
