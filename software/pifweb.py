@@ -79,7 +79,6 @@ def sendAddressByte(handle, a):
     print('FAILED: address byte send')
   else:
     print'Debug waddr: {} {}, raddr: {} {}'.format(sizeof(wbuff), repr(wbuff.raw), sizeof(rbuff), repr(rbuff.raw))
-    print numToRead, numWritten
 
 ##---------------------------------------------------------
 def sendDataByte(handle, v):
@@ -99,7 +98,6 @@ def sendDataByte(handle, v):
     print('FAILED: data byte send')
   else:
     print'Debug wbyte: {} {}, rdbyte: {} {}'.format(sizeof(wbuff), repr(wbuff.raw), sizeof(rbuff), repr(rbuff.raw))
-    print numToRead, numWritten
 
 ##---------------------------------------------------------
 # write val into the Misc register inside the FPGA
