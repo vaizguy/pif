@@ -25,8 +25,8 @@ reg [3:0             ] MiscRegLocal = `LED_SYNC;
 always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
 
     if (!sys_rst) begin
-        ScratchReg   <= 'd0;
-        MiscRegLocal <= 'd0;
+        ScratchReg   <=  'd0;
+        MiscRegLocal <= 4'd0;
     end
     else if (XI_PWr) begin
 
@@ -48,9 +48,9 @@ reg [7               :0] IdReadback;
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_1
 
     if (!sys_rst) begin
-        IDscratch <= 'd0;
-        IDletter  <= 'd0;
-        subAddr   <= 'd0;
+        IDscratch <= 8'd0;
+        IDletter  <= 8'd0;
+        subAddr   <= `R_ID_NUM_SUBS'd0;
     end
     else begin
         IDscratch <= {2'b01, ScratchReg     };
@@ -62,7 +62,7 @@ end
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_2
 
     if (!sys_rst) begin
-        subOut <= 'd0;
+        subOut <= 8'd0;
     end
     else begin
         case (1)
@@ -87,9 +87,9 @@ end
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4  
     
     if (!sys_rst) begin
-        IdReadback <= 'd0;
-        XO         <= 'd0;
-        MiscReg    <= 'd0;
+        IdReadback <= 8'd0;
+        XO         <= 8'd0;
+        MiscReg    <= 4'd0;
     end
     else begin
         IdReadback <= regOut      ;
