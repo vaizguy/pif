@@ -232,9 +232,13 @@ piffla_vsim
 transcript
 work
 sim
+wave.do
 
 # EFB file
 efb.sort
 
 # Synthesis directory
 synthesis
+
+# Lattice diamond
+efb.ipx
