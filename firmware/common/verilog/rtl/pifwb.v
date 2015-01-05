@@ -2,12 +2,12 @@
 
 module pifwb (
 
-    inout       i2c_SCL,
-    inout       i2c_SDA,
+    inout                        i2c_SCL,
+    inout                        i2c_SDA,
 
-    input       xclk   ,
+    input                        xclk   ,
 
-    //XIrec       XI     , // works only with sv
+    //XIrec                        XI     ,      // works only with sv
 
     output                       XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
     output  [`TXA            :0] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
@@ -15,9 +15,9 @@ module pifwb (
     output  [`TXSubA         :0] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
     output  [`I2C_DATA_BITS-1:0] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
 
-    input [7:0] XO,
+    input   [7               :0] XO,
 
-    input sys_rst
+    input                        sys_rst
 );
 
 // WB state machine encoding 
@@ -64,26 +64,28 @@ parameter [7:0]  CFG_RXDR   = 8'h73;
 parameter [7:0]  CFG_IRQ    = 8'h74;
 parameter [7:0]  CFG_IRQEN  = 8'h75;
 
+// Wires
 wire [7:0] wbDat_o;
-wire wbAck_o;
+wire       wbAck_o;
 
-reg [7:0] wbDat_i;
-reg [7:0] wbAddr;
-reg [7:0] wbOutBuff;
+// Registers
+reg [7               :0] wbDat_i;
+reg [7               :0] wbAddr;
+reg [7               :0] wbOutBuff;
 
-reg busy; 
-reg txReady; 
-reg rxReady; 
-reg lastTxNak; 
-reg isAddr; 
-reg isData;
+reg                      busy; 
+reg                      txReady; 
+reg                      rxReady; 
+reg                      lastTxNak; 
+reg                      isAddr; 
+reg                      isData;
 
-reg wbCyc;
-reg wbStb;
-reg wbWe;
+reg                      wbCyc;
+reg                      wbStb;
+reg                      wbWe;
 
-reg [3:0] WBstate;
-reg [3:0] rwReturn;
+reg [3               :0] WBstate;
+reg [3               :0] rwReturn;
 
 reg                      hitI2CSR;
 reg                      hitI2CRXDR;
@@ -126,7 +128,7 @@ wire wbRst = 1'b0
 ;
 
 // Embedded function block (EFB)
-efb myEFB (
+myefb myEFB (
     .wb_clk_i (xclk   ), 
     .wb_rst_i (wbRst  ), 
     .wb_cyc_i (wbCyc  ), 
@@ -192,51 +194,64 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
             
             WBstart: 
             begin
+                // Write I2C Command 
+                // STA | STD | RD | WR | ACK | CKSDIS | rsvd | rsvd
                 wbAddr    <= I2C1_CMDR;
-                wbDat_i   <= 8'h04;
+                // clock stretch disable
+                // clock streatching is not supported in this device.
+                // this bit should be set to one for all writes
+                // Page 8 of 78 of Using User Flash Memory and Hardened
+                // Control Functions in MachXO2 Devices Reference Guide
+                wbDat_i   <= 8'h04;      
                 rwReturn  <= WBinit1;
                 nextState <= WBwr;
-                // clock stretch disable
             end
 
             WBinit1:
             begin
+                // Read I2C Status registers   
+                // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC                
                 wbAddr    <= I2C1_SR;
+                // wait for not busy
                 wbDat_i   <= 8'h0;
                 rwReturn  <= WBinit2;
                 nextState <= WBrd;
-                // wait for not busy
             end
 
             WBinit2:
             begin
                 if (busy)
+                    // bus is busy
                     nextState <= WBrd;
                 else begin
+                    // Read I2C Receive data rgister - 8 bits             
                     wbAddr    <= I2C1_RXDR;
+                    // read and discard RXDR, #1  
                     wbDat_i   <= 8'h0;
                     rwReturn  <= WBinit3;
                     nextState <= WBrd;
-                    // read and discard RXDR, #1
                 end
             end
 
             WBinit3:
             begin
+                // Read I2C Receive data register - 8 bits       
                 wbAddr    <= I2C1_RXDR;
+                // read and discard RXDR, #2                
                 wbDat_i   <= 8'h0;
                 rwReturn  <= WBinit4;
                 nextState <= WBrd;
-                // read and discard RXDR, #2
             end
 
             WBinit4: 
             begin
+                // Write I2C Command
+                // STA | STD | RD | WR | ACK | CKSDIS | rsvd | rsvd
                 wbAddr    <= I2C1_CMDR;
-                wbDat_i   <= 'h00;
+                // clock stretch enable                
+                wbDat_i   <= 8'h0;
                 rwReturn  <= WBidle;
                 nextState <= WBwr;
-                // clock stretch enable
             end
 
             //-----------------------------------
@@ -245,16 +260,20 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
             WBidle :
             begin
                 if (busy) begin
+                    // Read I2C Status registers   
+                    // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
                     wbAddr   <= I2C1_SR;
+                    // wait for I2C activity - "busy" is signalled                    
                     wbDat_i  <= 8'h0;
                     rwReturn <= WBwaitTR;
                 end
                 else
                 begin
+                    // Read I2C Status registers   
+                    // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
                     wbAddr   <= I2C1_SR;
                     wbDat_i  <= 8'h0;
                     rwReturn <= WBidle;
-                    // wait for I2C activity - "busy" is signalled
                 end
                 nextState <= WBrd;
             end
@@ -267,12 +286,14 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 if (lastTxNak)                      // last read?
                     nextState <= WBstart;
                 else if (txReady) begin
+                    // Write Transmit data register - 8 bits
                     wbAddr    <= I2C1_TXDR;
                     wbDat_i   <= XO;
                     rwReturn  <= WBout0;
                     nextState <= WBwr;
                 end
                 else if (rxReady) begin
+                    // Read I2C Receive data register - 8 bits                
                     wbAddr    <= I2C1_RXDR;
                     wbDat_i   <= 8'h0;
                     rwReturn  <= WBin0;
@@ -306,6 +327,8 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                     wbCyc <= 1'b0;
 
                     if (hitI2CSR) begin
+                        // Read I2C Status registers   
+                        // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
                         vTIP               <= (wbDat_o[7] == 1'b1);
                         vBusy              <= (wbDat_o[6] == 1'b1);
                         vRARC              <= (wbDat_o[5] == 1'b1);
@@ -319,6 +342,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                         busy      <= vBusy;
                     end 
                     else if (hitI2CRXDR) begin
+                        // Read I2C Data registers   
                         isAddr  <= (wbDat_o[7:`I2C_TYPE_BITS] == `A_ADDR);
                         isData  <= (wbDat_o[7:`I2C_TYPE_BITS] == `D_ADDR);
                         inData  <=  wbDat_o[`I2C_DATA_BITS-1:0];
@@ -342,9 +366,9 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
             WBwr:
             begin
                 if (wbAck) begin
-                    wbStb <= 1'b0;
-                    wbCyc <= 1'b0;
-                    wbWe  <= 1'b0;
+                    wbStb     <= 1'b0;
+                    wbCyc     <= 1'b0;
+                    wbWe      <= 1'b0;
                     nextState <= rwReturn;
                 end
                 else begin

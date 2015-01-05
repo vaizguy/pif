@@ -39,40 +39,40 @@ pif_flasher i_pif_flasher (
 // Wishbone interface
 pifwb i_pifwb (
 
-    /*inout */ .i2c_SCL (SCL ),
-    /*inout */ .i2c_SDA (SDA ),
+    /*inout */ .i2c_SCL       (SCL           ),
+    /*inout */ .i2c_SDA       (SDA           ),
 
-    /*input */ .xclk    (xclk),
+    /*input */ .xclk          (xclk          ),
 
-    ///*output*/ .XI      (XI  ),
+    ///*output*/ .XI            (XI            ),
                .XI_PWr        (XI_PWr        ),        
                .XI_PRWA       (XI_PRWA       ),       
                .XI_PRdFinished(XI_PRdFinished),
                .XI_PRdSubA    (XI_PRdSubA    ),    
                .XI_PD         (XI_PD         ),         
 
-    /*input */ .XO      (XO   ),
+    /*input */ .XO            (XO            ),
     
-    /*input */ .sys_rst (GSRnX)
+    /*input */ .sys_rst       (GSRnX         )
 );
 
 // Control logic
 pifctl i_pifctl(
 
-    /*input */ .xclk    (xclk   ),
+    /*input */ .xclk          (xclk          ),
 
-    ///*input */ .XI      (XI     ),
+    ///*input */ .XI            (XI            ),
                .XI_PWr        (XI_PWr        ),        
                .XI_PRWA       (XI_PRWA       ),       
                .XI_PRdFinished(XI_PRdFinished),
                .XI_PRdSubA    (XI_PRdSubA    ),    
                .XI_PD         (XI_PD         ),         
 
-    /*output*/ .XO      (XO     ),
+    /*output*/ .XO            (XO            ),
       
-    /*output*/ .MiscReg (MiscReg),
+    /*output*/ .MiscReg       (MiscReg       ),
 
-    /*input */ .sys_rst (GSRnX  )
+    /*input */ .sys_rst       (GSRnX         )
 );
 
 reg r, g;

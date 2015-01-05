@@ -2,21 +2,21 @@
 
 module pifctl (
 
-    input        xclk   ,
+    input                           xclk   ,
 
-    //XIrec        XI     ,
+    //XIrec                           XI     ,
 
-    input                      XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
-    input [`TXA            :0] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
-    input                      XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
-    input [`TXSubA         :0] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
-    input [`I2C_DATA_BITS-1:0] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
+    input                           XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
+    input      [`TXA            :0] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
+    input                           XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
+    input      [`TXSubA         :0] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
+    input      [`I2C_DATA_BITS-1:0] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
 
-    output reg [7:0] XO     ,
+    output reg [7               :0] XO,
     
-    output reg [1:0] MiscReg,
+    output reg [1               :0] MiscReg,
 
-    input sys_rst
+    input                           sys_rst
 );
 
 reg [`I2C_DATA_BITS-1:0] ScratchReg;
@@ -53,8 +53,8 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_1
         subAddr   <= `R_ID_NUM_SUBS'd0;
     end
     else begin
-        IDscratch <= {2'b01, ScratchReg     };
-        IDletter  <= {4'd6 , XI_PRdSubA[3:0]}; // 61h='a'
+        IDscratch <= {2'b01, ScratchReg                    };
+        IDletter  <= {4'd6 , int_to_4bit_vector(XI_PRdSubA)}; // 61h='a'
         subAddr   <= XI_PRdSubA % `R_ID_NUM_SUBS;
     end
 end
@@ -89,7 +89,7 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4
     if (!sys_rst) begin
         IdReadback <= 8'd0;
         XO         <= 8'd0;
-        MiscReg    <= 4'd0;
+        MiscReg    <= 2'd0;
     end
     else begin
         IdReadback <= regOut      ;
@@ -97,5 +97,11 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4
         MiscReg    <= MiscRegLocal;
     end
 end
+
+function [3:0] int_to_4bit_vector (input arg);
+    begin
+        int_to_4bit_vector = arg % (2**4);       
+    end
+endfunction
 
 endmodule
