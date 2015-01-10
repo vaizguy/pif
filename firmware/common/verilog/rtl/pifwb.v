@@ -121,7 +121,7 @@ always @(posedge xclk or negedge sys_rst) begin: reset_blk
 end
 
 // used in debug mode to reset the internal 16-bit counters
-wire wbRst = 1'b0
+wire wbRst = !sys_rst
 // synthesis translate_off
                | rst
 // synthesis translate_on
@@ -397,7 +397,7 @@ end
 always @(posedge xclk) begin: wb_statemachine_blk_2
 
     if (rst) begin
-        rwAddr            <= 'd0;
+        rwAddr            <= `TXA_W'd0;
         RdSubAddr         <= 'd0;
         WrSubAddr         <= 'd0;
         XIloc_PD          <= 'd0;
@@ -408,7 +408,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_2
         if ((WBstate == WBin0) & isAddr)
             rwAddr <= inData[`TXARange];
 
-        if ((WBstate == WBin0) & isAddr)
+        if ((WBstate == WBin0) & isAddr) 
             RdSubAddr <= 'd0;
         else if (XIloc_PRdFinished)
             RdSubAddr <= (RdSubAddr +1) % (`XSUBA_MAX+1);
@@ -449,8 +449,8 @@ always @(posedge xclk) begin: wb_statemachine_blk_3
 end
 
 
+// Assign XI Nets
 //assign XI <= XIloc;
-
 assign XI_PWr         = XIloc_PWr        ;
 assign XI_PRWA        = XIloc_PRWA       ;
 assign XI_PRdFinished = XIloc_PRdFinished;

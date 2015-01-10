@@ -14,25 +14,25 @@ module pifctl (
 
     output reg [7               :0] XO,
     
-    output reg [1               :0] MiscReg,
+    output reg [`I2C_TYPE_BITS-1:0] MiscReg,
 
     input                           sys_rst
 );
 
 reg [`I2C_DATA_BITS-1:0] ScratchReg;
-reg [               1:0] MiscRegLocal;
+reg [`I2C_TYPE_BITS-1:0] MiscRegLocal;
 
 always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
 
     if (!sys_rst) begin
-        ScratchReg   <= `I2C_DATA_BIT'h15;
+        ScratchReg   <= `I2C_DATA_BITS'h15;
         MiscRegLocal <= `LED_ALTERNATING;  // Default is alternating LEDs
     end
     else if (XI_PWr) begin
 
         case(XI_PRWA)
-            `W_SCRATCH_REG: ScratchReg   <= XI_PD;
-            `W_MISC_REG   : MiscRegLocal <= XI_PD;
+            `W_SCRATCH_REG: ScratchReg   <= XI_PD[`I2C_DATA_BITS-1:0];
+            `W_MISC_REG   : MiscRegLocal <= XI_PD[`I2C_TYPE_BITS-1:0];
             default:;
         endcase
     end

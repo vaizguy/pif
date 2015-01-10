@@ -20,7 +20,7 @@ wire                      red_flash;
 wire                      green_flash;
 wire [7               :0] XO;
 wire                      GSRnX;
-wire [1               :0] MiscReg;
+wire [`I2C_TYPE_BITS-1:0] MiscReg;
 wire                      XI_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
 wire [`TXA            :0] XI_PRWA;        /*: TXA;          -- registered incoming addr bus        */
 wire                      XI_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 

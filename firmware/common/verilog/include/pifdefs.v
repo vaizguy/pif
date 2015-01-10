@@ -18,11 +18,12 @@
 
 `define TXARange  `XA_BITS-1:0
 `define TXA       2**`XA_BITS-1
+`define TXA_W     2**`XA_BITS
 `define TXSubA    `XSUBA_MAX
 
 //-----------------------------------------------------------
 // ID register, read-only
-`define R_ID 0
+`define R_ID `TXA_W'd0
 
 // ID subregisters
 //  0     ID                        BX4/8/16 = G/L/A
@@ -36,14 +37,14 @@
 `define R_ID_MISC     `R_ID_NUM_SUBS'd2
 
 // Scratch register, write here, read via R_ID, subaddr 1
-`define W_SCRATCH_REG `TXA'd1
+`define W_SCRATCH_REG `TXA_W'd1
 
 // Misc register, write here, read via R_ID, subaddr 2
 // one of the examples uses this register to control the LEDs
-`define W_MISC_REG    `TXA'd2
+`define W_MISC_REG    `TXA_W'd2
 
 // LED States
-`define LED_ALTERNATING 2'd0
-`define LED_SYNC        2'd1
-`define LED_OFF         2'd2
+`define LED_ALTERNATING `I2C_TYPE_BITS'd0
+`define LED_SYNC        `I2C_TYPE_BITS'd1
+`define LED_OFF         `I2C_TYPE_BITS'd2
 

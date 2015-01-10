@@ -1,4 +1,6 @@
 
+`timescale 1 ns / 1 ps
+
 module DownCounter (Clk, sys_rst, LoadN, CE, InitialVal, zero);
 
 parameter BITS = 10;
@@ -29,6 +31,7 @@ assign zero = (Ctr[BITS] == 1'b1);
 endmodule 
 
 // synthesis translate_off
+`ifdef USE_LOCAL_OSCH
 module OSCH (
 
     input  STDBY,
@@ -51,6 +54,7 @@ end
 assign OSC = osc_clk;
 
 endmodule
+`endif // USE_LOCAL_OSCH
 // synthesis translate_on
 
 module pif_flasher (
