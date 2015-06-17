@@ -35,6 +35,7 @@ parameter WBwr     = 4'd10;
 parameter WBrd     = 4'd11;
 
 // wishbone/EFB addresses
+// primary I2C
 parameter [7:0]  I2C1_CR    = 8'h40;
 parameter [7:0]  I2C1_CMDR  = 8'h41;
 parameter [7:0]  I2C1_BR0   = 8'h42;
@@ -45,7 +46,7 @@ parameter [7:0]  I2C1_GCDR  = 8'h46;
 parameter [7:0]  I2C1_RXDR  = 8'h47;
 parameter [7:0]  I2C1_IRQ   = 8'h48;
 parameter [7:0]  I2C1_IRQEN = 8'h49;
-
+// secondary I2C
 parameter [7:0]  I2C2_CR    = 8'h4A;
 parameter [7:0]  I2C2_CMDR  = 8'h4B;
 parameter [7:0]  I2C2_BR0   = 8'h4C;
@@ -56,7 +57,7 @@ parameter [7:0]  I2C2_GCDR  = 8'h50;
 parameter [7:0]  I2C2_RXDR  = 8'h51;
 parameter [7:0]  I2C2_IRQ   = 8'h52;
 parameter [7:0]  I2C2_IRQEN = 8'h53;
-               
+
 parameter [7:0]  CFG_CR     = 8'h70;
 parameter [7:0]  CFG_TXDR   = 8'h71;
 parameter [7:0]  CFG_SR     = 8'h72;
@@ -121,9 +122,9 @@ always @(posedge xclk or negedge sys_rst) begin: reset_blk
 end
 
 // used in debug mode to reset the internal 16-bit counters
-wire wbRst = !sys_rst
+wire wbRst = 1'b0
 // synthesis translate_off
-               | rst
+             | rst
 // synthesis translate_on
 ;
 
@@ -213,7 +214,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC                
                 wbAddr    <= I2C1_SR;
                 // wait for not busy
-                wbDat_i   <= 8'h0;
+                wbDat_i   <= 8'h00;
                 rwReturn  <= WBinit2;
                 nextState <= WBrd;
             end
@@ -227,7 +228,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                     // Read I2C Receive data rgister - 8 bits             
                     wbAddr    <= I2C1_RXDR;
                     // read and discard RXDR, #1  
-                    wbDat_i   <= 8'h0;
+                    wbDat_i   <= 8'h00;
                     rwReturn  <= WBinit3;
                     nextState <= WBrd;
                 end
@@ -238,7 +239,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 // Read I2C Receive data register - 8 bits       
                 wbAddr    <= I2C1_RXDR;
                 // read and discard RXDR, #2                
-                wbDat_i   <= 8'h0;
+                wbDat_i   <= 8'h00;
                 rwReturn  <= WBinit4;
                 nextState <= WBrd;
             end
@@ -249,7 +250,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 // STA | STD | RD | WR | ACK | CKSDIS | rsvd | rsvd
                 wbAddr    <= I2C1_CMDR;
                 // clock stretch enable                
-                wbDat_i   <= 8'h0;
+                wbDat_i   <= 8'h00;
                 rwReturn  <= WBidle;
                 nextState <= WBwr;
             end
@@ -264,7 +265,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                     // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
                     wbAddr   <= I2C1_SR;
                     // wait for I2C activity - "busy" is signalled                    
-                    wbDat_i  <= 8'h0;
+                    wbDat_i  <= 8'h00;
                     rwReturn <= WBwaitTR;
                 end
                 else
@@ -272,7 +273,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                     // Read I2C Status registers   
                     // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
                     wbAddr   <= I2C1_SR;
-                    wbDat_i  <= 8'h0;
+                    wbDat_i  <= 8'h00;
                     rwReturn <= WBidle;
                 end
                 nextState <= WBrd;
@@ -295,7 +296,7 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 else if (rxReady) begin
                     // Read I2C Receive data register - 8 bits                
                     wbAddr    <= I2C1_RXDR;
-                    wbDat_i   <= 8'h0;
+                    wbDat_i   <= 8'h00;
                     rwReturn  <= WBin0;
                     nextState <= WBrd;
                 end
@@ -343,8 +344,8 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                     end 
                     else if (hitI2CRXDR) begin
                         // Read I2C Data registers   
-                        isAddr  <= (wbDat_o[7:`I2C_TYPE_BITS] == `A_ADDR);
-                        isData  <= (wbDat_o[7:`I2C_TYPE_BITS] == `D_ADDR);
+                        isAddr  <= (wbDat_o[7:`I2C_DATA_BITS] == `A_ADDR);
+                        isData  <= (wbDat_o[7:`I2C_DATA_BITS] == `D_ADDR);
                         inData  <=  wbDat_o[`I2C_DATA_BITS-1:0];
                     end
                     else if (hitCFGRXDR) begin

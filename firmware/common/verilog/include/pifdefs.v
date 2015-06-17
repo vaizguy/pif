@@ -44,7 +44,7 @@
 `define W_MISC_REG    `TXA_W'd2
 
 // LED States
-`define LED_ALTERNATING `I2C_TYPE_BITS'd0
-`define LED_SYNC        `I2C_TYPE_BITS'd1
-`define LED_OFF         `I2C_TYPE_BITS'd2
+`define LED_ALTERNATING 32'd0
+`define LED_SYNC        32'd1
+`define LED_OFF         32'd2
 

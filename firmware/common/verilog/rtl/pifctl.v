@@ -14,13 +14,15 @@ module pifctl (
 
     output reg [7               :0] XO,
     
-    output reg [`I2C_TYPE_BITS-1:0] MiscReg,
+    output reg [31              :0] MiscReg,
 
     input                           sys_rst
 );
 
 reg [`I2C_DATA_BITS-1:0] ScratchReg;
-reg [`I2C_TYPE_BITS-1:0] MiscRegLocal;
+reg [31              :0] MiscRegLocal;
+
+`define XI_PD_INT_FILL_SIZE 32-`I2C_DATA_BITS
 
 always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
 
@@ -32,7 +34,7 @@ always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
 
         case(XI_PRWA)
             `W_SCRATCH_REG: ScratchReg   <= XI_PD[`I2C_DATA_BITS-1:0];
-            `W_MISC_REG   : MiscRegLocal <= XI_PD[`I2C_TYPE_BITS-1:0];
+            `W_MISC_REG   : MiscRegLocal <= {`XI_PD_INT_FILL_SIZE'd0, XI_PD};
             default:;
         endcase
     end
@@ -53,8 +55,8 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_1
         subAddr   <= `R_ID_NUM_SUBS'd0;
     end
     else begin
-        IDscratch <= {2'b01, ScratchReg                    };
-        IDletter  <= {4'd6 , int_to_4bit_vector(XI_PRdSubA)}; // 61h='a'
+        IDscratch <= {2'b01, ScratchReg                };
+        IDletter  <= {4'd6 , to_4bit_vector(XI_PRdSubA)}; // 61h='a'
         subAddr   <= XI_PRdSubA % `R_ID_NUM_SUBS;
     end
 end
@@ -68,7 +70,7 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_2
         case (subAddr)
             `R_ID_ID     : subOut <= `ID;
             `R_ID_SCRATCH: subOut <= IDscratch;
-            `R_ID_MISC   : subOut <= {4'd5, 2'd0, MiscRegLocal}; // 50h='P'
+            `R_ID_MISC   : subOut <= {4'd5, to_4bit_vector(MiscRegLocal)}; // 50h='P'
             default: subOut <= IDletter;
         endcase
     end
@@ -87,9 +89,9 @@ end
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4  
     
     if (!sys_rst) begin
-        IdReadback <= 8'd0;
-        XO         <= 8'd0;
-        MiscReg    <= 2'd0;
+        IdReadback <=  8'd0;
+        XO         <=  8'd0;
+        MiscReg    <= 32'd0;
     end
     else begin
         IdReadback <= regOut      ;
@@ -98,9 +100,9 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4
     end
 end
 
-function [3:0] int_to_4bit_vector (input arg);
+function [3:0] to_4bit_vector (input arg);
     begin
-        int_to_4bit_vector = arg % (2**4);       
+        to_4bit_vector = arg % (2**4);       
     end
 endfunction
 

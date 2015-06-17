@@ -20,12 +20,16 @@ wire                      red_flash;
 wire                      green_flash;
 wire [7               :0] XO;
 wire                      GSRnX;
-wire [`I2C_TYPE_BITS-1:0] MiscReg;
+wire [31              :0] MiscReg;
 wire                      XI_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
 wire [`TXA            :0] XI_PRWA;        /*: TXA;          -- registered incoming addr bus        */
 wire                      XI_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
 wire [`TXSubA         :0] XI_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
 wire [`I2C_DATA_BITS-1:0] XI_PD;          /*: TwrData;      -- registered incoming data bus        */
+
+// Global set/reset
+IB IBgsr (.I(GSRn), .O(GSRnX));
+GSR GSR_GSR (.GSR(GSRnX));
 
 // LED Flasher
 pif_flasher i_pif_flasher (
@@ -107,10 +111,6 @@ always @(*) begin : led_pattern_select_blk
 
     endcase
 end
-
-// Global set/reset
-IB IBgsr (.I(GSRn), .O(GSRnX));
-GSR GSR_GSR (.GSR(GSRnX));
 
 // Outputs
 OB   REG_BUF (.I(r), .O(LEDR));

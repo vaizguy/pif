@@ -9,17 +9,22 @@ parameter I2C_ADDR = 8'h82;
 
 wire i2c_sda;
 wire i2c_scl;
+wire i2c_sda_in;
+wire i2c_scl_in;
 wire sys_rst;
 wire ledr;
 wire ledg;
 
-reg i2c_scl_out;
-reg i2c_sda_out;
-reg i2c_ackn;
-reg i2c_toggle;
-reg i2c_addr;
+reg        i2c_scl_out;
+reg        i2c_sda_out;
+reg        i2c_ackn;
+reg        i2c_din;
+reg        i2c_toggle;
+reg        i2c_addr;
 reg [31:0] outBuf_count;
+reg [31:0] obSig_count;
 reg [7 :0] outBuf_data [249:0];
+reg [7 :0] obSig_data [249:0];
 
 // Fixes elaboration errors
 PUR PUR_INST(.PUR(1'b1));
@@ -50,7 +55,6 @@ initial begin: i2c_clk_gen
         #1250 i2c_clk = ~i2c_clk; // 2500 ns i2c clock =~ 400Khz
     end
 end
-
 
 // 20 Mhz clock
 initial begin: clk_20mhz_gen
@@ -239,13 +243,6 @@ task i2c_rd_start;
 endtask
 
 //---------------------------------------------
-reg i2c_din;
-always @(posedge i2c_clk) begin: i2c_data_input
-    i2c_din <= i2c_sda;
-end
-
-
-//---------------------------------------------
 task waitfor;
 
     input [31:0] ticks;
@@ -259,11 +256,15 @@ endtask
 task write_bus;
 
     input [7:0] x;
+
     integer n;
 
     begin
+        n = outBuf_count;
         outBuf_data[n] = x;
         outBuf_count = outBuf_count+1;
+        obSig_data[n] = outBuf_data[n];
+        obSig_count = outBuf_count;        
         waitfor(1);
     end
 endtask
@@ -309,6 +310,8 @@ task flush;
             for(i=0; i<n-1; i = i+1) begin
                 i2c_sendbyte(sda, scl, ack, i2c_din, i2c_toggle, outBuf_data[i]);
                 outBuf_count  = outBuf_count - 1;
+                obSig_data[i] = outBuf_data[i];
+                obSig_count = outBuf_count;
             end
             i2c_stop(sda, scl);
         end
@@ -342,10 +345,26 @@ task read_reg; // unused but maybe useful for debug
                 i2c_ack = 1'b1;
 
             i2c_recvbit(sda, scl, i2c_ack, i2c_din, i2c_toggle, v);
-            $display("Value  %b ", v);
+            $display("Read Value  %b ", v);
         end
     end
 endtask
+
+//---------------------------------------------
+
+assign i2c_sda = i2c_sda_out ? 1'bz : 1'b0; 
+assign i2c_scl = i2c_scl_out ? 1'bz : 1'b0; 
+
+// VHDL map for easy ref
+assign i2c_sda_in = i2c_sda;
+assign i2c_scl_in = i2c_scl;
+
+always @(posedge i2c_scl_in) begin: i2c_data_input
+    i2c_din <= i2c_sda_in;
+end
+
+//---------------------------------------------
+
 
 integer i;
 // main test 
@@ -355,7 +374,7 @@ initial begin: main_test
     // Reset Buffer Count 
     outBuf_count = 32'd0;
     // Reset Buffer data
-    for (i=0; i<8; i=i+1) 
+    for (i=0; i<250; i=i+1) 
         outBuf_data[i] <= 8'd0;
 
     // I2C toggle and address
@@ -369,7 +388,7 @@ initial begin: main_test
     // Write data
     write_data(6'd1); // LED Alternating to LED Sync
     #9850;
-    // Flush test i2c buffer
+    // Flush test i2c buffer to DUT i2c lines
     flush(i2c_sda_out, i2c_scl_out, i2c_ackn, i2c_din, i2c_toggle, i2c_addr);
 
 end
@@ -381,7 +400,7 @@ initial begin
     $fsdbAutoSwitchDumpfile(500, "flashctl_tb_vsim.fsdb", 10);
     $fsdbDumpvars(0,flashctl_tb); 
 `elsif DUMP_IRUN
-    $recordfile("flashctl_tb","incsize=500");
+    $recordfile("flashctl_tb.trn","incsize=500");
     $recordvars();
 `else
     $dumpfile("flashctl_tb_vsim.vcd");
