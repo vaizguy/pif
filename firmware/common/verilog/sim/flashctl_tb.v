@@ -21,6 +21,10 @@ reg i2c_addr;
 reg [31:0] outBuf_count;
 reg [7 :0] outBuf_data [249:0];
 
+// Fixes elaboration errors
+PUR PUR_INST(.PUR(1'b1));
+GSR GSR_INST(.GSR(1'b1));
+
 flasher i_flasher(
 
     // I2C interface
@@ -374,13 +378,13 @@ initial begin
     #0;    
     $display($time,"TEST EXECUTION STARTED!");
 `ifdef DUMP_FSDB
-    $fsdbAutoSwitchDumpfile(500, "piffla_tb.fsdb", 10);
+    $fsdbAutoSwitchDumpfile(500, "flashctl_tb_vsim.fsdb", 10);
     $fsdbDumpvars(0,flashctl_tb); 
 `elsif DUMP_IRUN
     $recordfile("flashctl_tb","incsize=500");
     $recordvars();
 `else
-    $dumpfile("flashctl_tb_vsim");
+    $dumpfile("flashctl_tb_vsim.vcd");
     $dumpvars();
 `endif
     #19999;
