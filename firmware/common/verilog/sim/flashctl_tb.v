@@ -365,7 +365,6 @@ end
 
 //---------------------------------------------
 
-
 integer i;
 // main test 
 initial begin: main_test
@@ -397,18 +396,18 @@ initial begin
     #0;    
     $display($time,"TEST EXECUTION STARTED!");
 `ifdef DUMP_FSDB
-    $fsdbAutoSwitchDumpfile(500, "flashctl_tb_vsim.fsdb", 10);
+    $fsdbAutoSwitchDumpfile(500, "flashctl_tb.fsdb", 10);
     $fsdbDumpvars(0,flashctl_tb); 
 `elsif DUMP_IRUN
     $recordfile("flashctl_tb.trn","incsize=500");
     $recordvars();
 `else
-    $dumpfile("flashctl_tb_vsim.vcd");
+    $dumpfile("flashctl_tb.vcd");
     $dumpvars();
 `endif
-    #19999;
-    $display($time,"TEST EXECUTION FINISHED!");
-    #20000 $stop();
+    #39999;
+    $display($time,": TEST EXECUTION FINISHED!");
+    #1 $stop();
 end
 
 endmodule 
