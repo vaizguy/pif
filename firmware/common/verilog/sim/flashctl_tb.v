@@ -165,10 +165,12 @@ task i2c_sendbyte;
    
     integer i;
     begin
+        $display($time, ": Begin transmitting byte over I2C.");
         for (i = 0; i < 8; i = i +1) begin
-          	$display ("Sending Byte no: %d , val: %b", i, byte[i]);
+          	$display ("Sending Bit-%0d = %b", i, byte[i]);
             i2c_sendbit(byte[i], sda, scl);
         end
+        $display($time, ": Done transmitting byte over I2C.");
 
         // After this ack=0/nack=1 in i2c_din
         i2c_doclock(scl);
@@ -262,6 +264,7 @@ task write_bus;
     begin
         n = outBuf_count;
         outBuf_data[n] = x;
+        $display("%0d [8'b%B] Buffer item added. Write Buffer index: %0d", x, x, n);
         outBuf_count = outBuf_count+1;
         obSig_data[n] = outBuf_data[n];
         obSig_count = outBuf_count;        
@@ -299,20 +302,29 @@ task flush;
     integer n;
     integer i;
 
+    reg [7:0] tmp;
+
     begin
         n = outBuf_count;
 
         if (n>0) begin
             waitfor(1);
             #5;
+            $display($time, ": Flush write start.");
             i2c_wr_start(sda, scl, ack, i2c_din, i2c_toggle, i2c_addr);
 
-            for(i=0; i<n-1; i = i+1) begin
-                i2c_sendbyte(sda, scl, ack, i2c_din, i2c_toggle, outBuf_data[i]);
-                outBuf_count  = outBuf_count - 1;
+            $display($time, ": Begin flushing I2C test buffer.");
+            for(i=0; i<=n-1; i=i+1) begin
+                tmp = outBuf_data[i];
+                i2c_sendbyte(sda, scl, ack, i2c_din, i2c_toggle, tmp);
+                $display("%0d [8'b%B] Buffer item extracted, Read buffer index: %0d", outBuf_data[i], outBuf_data[i], i);   
+                outBuf_count  = outBuf_count-1;
+                // Debugging bus
                 obSig_data[i] = outBuf_data[i];
                 obSig_count = outBuf_count;
             end
+            $display($time, ": Done flushing I2C test buffer.");
+
             i2c_stop(sda, scl);
         end
     end
@@ -384,9 +396,10 @@ initial begin: main_test
     // Begin sequence
     // Write Address
     write_addr(6'd2);
+    
     // Write data
-    write_data(6'd1); // LED Alternating to LED Sync
-    #9850;
+    //write_data(6'd1); // LED Alternating to LED Sync
+    
     // Flush test i2c buffer to DUT i2c lines
     flush(i2c_sda_out, i2c_scl_out, i2c_ackn, i2c_din, i2c_toggle, i2c_addr);
 
@@ -405,9 +418,10 @@ initial begin
     $dumpfile("flashctl_tb.vcd");
     $dumpvars();
 `endif
-    #39999;
+    #999999;
     $display($time,": TEST EXECUTION FINISHED!");
-    #1 $stop();
+    #1;
+    $stop();
 end
 
 endmodule 
