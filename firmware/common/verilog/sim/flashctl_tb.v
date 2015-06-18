@@ -6,6 +6,7 @@
 module flashctl_tb;
 
 parameter I2C_ADDR = 8'h82;
+parameter TEST_BUFFER_DEPTH = 5;
 
 wire i2c_sda;
 wire i2c_scl;
@@ -23,8 +24,9 @@ reg        i2c_toggle;
 reg        i2c_addr;
 reg [31:0] outBuf_count;
 reg [31:0] obSig_count;
-reg [7 :0] outBuf_data [249:0];
-reg [7 :0] obSig_data [249:0];
+reg [7 :0] outBuf_data [TEST_BUFFER_DEPTH-1:0];
+reg [7 :0] obSig_data [TEST_BUFFER_DEPTH-1:0];
+reg        flush_active;
 
 // Fixes elaboration errors
 PUR PUR_INST(.PUR(1'b1));
@@ -237,8 +239,6 @@ task write_bus;
         outBuf_data[n] = x;
         $display("%0d [8'b%B] Buffer item added. Write Buffer index: %0d", x, x, n);
         outBuf_count = outBuf_count+1;
-        obSig_data[n] = outBuf_data[n];
-        obSig_count = outBuf_count;        
         waitfor(1);
     end
 endtask
@@ -267,9 +267,11 @@ task flush;
     integer n;
     integer i;
 
-    reg [7:0] tmp;
+    reg [7:0] byte;
 
     begin
+        flush_active = 1'b1;
+
         n = outBuf_count;
 
         if (n>0) begin
@@ -280,17 +282,19 @@ task flush;
 
             $display($time, ": Begin flushing I2C test buffer.");
             for(i=0; i<=n-1; i=i+1) begin
-                tmp = outBuf_data[i];
-                i2c_sendbyte(tmp);
-                $display("%0d [8'b%B] Buffer item extracted, Read buffer index: %0d", outBuf_data[i], outBuf_data[i], i);   
+                byte = outBuf_data[i];
+                i2c_sendbyte(byte);
+                $display("%0d [8'b%B] Buffer item extracted, Read buffer index: %0d", byte, byte, i);   
                 outBuf_count  = outBuf_count-1;
                 // Debugging bus
-                obSig_data[i] = outBuf_data[i];
+                obSig_data[i] = byte;
                 obSig_count = outBuf_count;
             end
             $display($time, ": Done flushing I2C test buffer.");
 
             i2c_stop();
+
+            flush_active = 1'b0;
         end
     end
     
@@ -338,18 +342,26 @@ end
 integer i;
 // main test 
 initial begin: main_test
+   
+    // debug reg
+    flush_active = 1'b0;
+
     // Give some startup time for system
     #150;
     // Reset Buffer Count 
     outBuf_count = 32'd0;
     // Reset Buffer data
-    for (i=0; i<250; i=i+1) 
+    for (i=0; i<250; i=i+1) begin
         outBuf_data[i] <= 8'd0;
+        obSig_data[i] <= 8'd0;
+    end
 
     // I2C toggle and address
     i2c_ackn     = 1'b0;
     i2c_toggle   = 1'b0;
     i2c_addr     = I2C_ADDR;
+
+    #150;
 
     // Begin sequence
     // Write Address
