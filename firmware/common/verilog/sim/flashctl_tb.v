@@ -80,17 +80,15 @@ assign sys_rst = GSRnX;
 //-- scl    __/~~~~~~~~~~~\__     ______/~~~~~~~\__
 task i2c_start;
 
-    output sda;
-    output scl;
     begin
         @(posedge i2c_clk);
-        sda = 1'b1;
+        i2c_sda_out = 1'b1;
         @(posedge i2c_clk);
-        scl = 1'b1;
+        i2c_scl_out = 1'b1;
         @(posedge i2c_clk);
-        sda = 1'b0;
+        i2c_sda_out = 1'b0;
         @(posedge i2c_clk);
-        scl = 1'b0;
+        i2c_scl_out = 1'b0;
     end
 
 
@@ -103,16 +101,13 @@ endtask
 //-- scl    ______/~~~~~~~     ______/~~~~~~~
 task i2c_stop;
 
-    output sda;
-    output scl;
-
     begin
         @(posedge i2c_clk);
-        sda = 1'b0;
+        i2c_sda_out = 1'b0;
         @(posedge i2c_clk);
-        scl = 1'b1;
+        i2c_scl_out = 1'b1;
         @(posedge i2c_clk);
-        sda = 1'b1;
+        i2c_sda_out = 1'b1;
     end
 
 endtask
@@ -124,31 +119,27 @@ endtask
 task i2c_sendbit;
 
     input bit;
-    output sda;
-    output scl;
 
     begin
         @(posedge i2c_clk);
-        sda = bit;
+        i2c_sda_out = bit;
         @(posedge i2c_clk);
-        scl = 1'b1;
+        i2c_scl_out = 1'b1;
         @(posedge i2c_clk);
-        scl = 1'b0;
+        i2c_scl_out = 1'b0;
     end
 endtask
 
 //---------------------------------------------
 task i2c_doclock;
 
-    output scl;
-    
     begin
         @(posedge i2c_clk);
-        scl = 1'b0;
+        i2c_scl_out = 1'b0;
         @(posedge i2c_clk);
-        scl = 1'b1;
+        i2c_scl_out = 1'b1;
         @(posedge i2c_clk);
-        scl = 1'b0;
+        i2c_scl_out = 1'b0;
     end
 
 endtask
@@ -156,11 +147,6 @@ endtask
 //---------------------------------------------
 task i2c_sendbyte;
 
-    output sda;
-    output scl;
-    output ack;
-    input  i2c_din;
-    output i2c_toggle;
     input [7:0] byte;
    
     integer i;
@@ -168,15 +154,15 @@ task i2c_sendbyte;
         $display($time, ": Begin transmitting byte over I2C.");
         for (i = 0; i < 8; i = i +1) begin
           	$display ("Sending Bit-%0d = %b", i, byte[i]);
-            i2c_sendbit(byte[i], sda, scl);
+            i2c_sendbit(byte[i]);
         end
         $display($time, ": Done transmitting byte over I2C.");
 
         // After this ack=0/nack=1 in i2c_din
-        i2c_doclock(scl);
+        i2c_doclock();
         // wait for 2 clock cycles
         @(posedge i2c_clk);
-        ack = i2c_din;
+        i2c_ackn = i2c_din;
         i2c_toggle = ~i2c_toggle;
     end
 
@@ -185,11 +171,6 @@ endtask
 //---------------------------------------------
 task i2c_recvbit;
 
-    output sda;
-    output scl;
-    input  ack;
-    input  i2c_din;
-    output i2c_toggle;    
     output [7:0] v;
 
     reg [7:0] bi;
@@ -197,12 +178,12 @@ task i2c_recvbit;
     integer i;
     begin
         for (i = 0; i < 8; i = i +1) begin
-            i2c_sendbit(1'b1, sda, scl);
+            i2c_sendbit(1'b1);
             bi = {bi[6:0], i2c_din}; 
         end
           
         // send ack=0/nak=1
-        i2c_sendbit(ack, sda, scl);   
+        i2c_sendbit(i2c_ackn);   
 
         // wait for 2 clock cycles
         @(posedge i2c_clk);
@@ -215,32 +196,22 @@ endtask
 //---------------------------------------------
 task i2c_wr_start;
 
-    output sda;
-    output scl;
-    output ack;
-    input  i2c_din;
-    output i2c_toggle;    
     input [7:0] i2c_addr;
 
     begin
-        i2c_start(sda, scl);
-        i2c_sendbyte(sda, scl, ack, i2c_din, i2c_toggle, {i2c_addr[7:1], 1'b0});
+        i2c_start();
+        i2c_sendbyte({i2c_addr[7:1], 1'b0});
     end
 endtask
 
 //---------------------------------------------
 task i2c_rd_start;
 
-    output sda;
-    output scl;
-    output ack;
-    input  i2c_din;
-    output i2c_toggle;
     input [7:0] i2c_addr;
 
     begin
-        i2c_start(sda, scl);
-        i2c_sendbyte(sda, scl, ack, i2c_din, i2c_toggle, {i2c_addr[7:1], 1'b1});
+        i2c_start();
+        i2c_sendbyte({i2c_addr[7:1], 1'b1});
     end
 endtask
 
@@ -291,12 +262,6 @@ endtask
 //---------------------------------------------
 task flush;
 
-    output sda;
-    output scl;
-    output ack;
-    input  i2c_din;
-    output i2c_toggle;
-
     input [7:0] i2c_addr;
     
     integer n;
@@ -311,12 +276,12 @@ task flush;
             waitfor(1);
             #5;
             $display($time, ": Flush write start.");
-            i2c_wr_start(sda, scl, ack, i2c_din, i2c_toggle, i2c_addr);
+            i2c_wr_start(i2c_addr);
 
             $display($time, ": Begin flushing I2C test buffer.");
             for(i=0; i<=n-1; i=i+1) begin
                 tmp = outBuf_data[i];
-                i2c_sendbyte(sda, scl, ack, i2c_din, i2c_toggle, tmp);
+                i2c_sendbyte(tmp);
                 $display("%0d [8'b%B] Buffer item extracted, Read buffer index: %0d", outBuf_data[i], outBuf_data[i], i);   
                 outBuf_count  = outBuf_count-1;
                 // Debugging bus
@@ -325,7 +290,7 @@ task flush;
             end
             $display($time, ": Done flushing I2C test buffer.");
 
-            i2c_stop(sda, scl);
+            i2c_stop();
         end
     end
     
@@ -334,29 +299,22 @@ endtask
 //---------------------------------------------
 task read_reg; // unused but maybe useful for debug
 
-    output sda;
-    output scl;
-    output ack;
-    input  i2c_din;
-    output i2c_toggle;
-
     input [7:0] i2c_addr;
     input read_count;
 
-    reg i2c_ack;
     reg [7:0] v;
 
     integer i;
     begin
-        i2c_rd_start(sda, scl, ack, i2c_din, i2c_toggle, i2c_addr);
+        i2c_rd_start(i2c_addr);
 
         for (i=0; i<=read_count; i=i+1) begin
             if (i < read_count-1) 
-                i2c_ack = 1'b0;
+                i2c_ackn = 1'b0;
             else
-                i2c_ack = 1'b1;
+                i2c_ackn = 1'b1;
 
-            i2c_recvbit(sda, scl, i2c_ack, i2c_din, i2c_toggle, v);
+            i2c_recvbit(v);
             $display("Read Value  %b ", v);
         end
     end
@@ -391,17 +349,17 @@ initial begin: main_test
     // I2C toggle and address
     i2c_ackn     = 1'b0;
     i2c_toggle   = 1'b0;
-    i2c_addr     = 8'h82;
+    i2c_addr     = I2C_ADDR;
 
     // Begin sequence
     // Write Address
     write_addr(6'd2);
     
     // Write data
-    //write_data(6'd1); // LED Alternating to LED Sync
+    write_data(6'd1); // LED Alternating to LED Sync
     
-    // Flush test i2c buffer to DUT i2c lines
-    flush(i2c_sda_out, i2c_scl_out, i2c_ackn, i2c_din, i2c_toggle, i2c_addr);
+    // Flush test i2c buffer to DUT i2c lines for given addr
+    flush(i2c_addr);
 
 end
 
