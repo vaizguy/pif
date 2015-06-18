@@ -70,10 +70,10 @@ module pif_flasher (
     input sys_rst
 );
 
-parameter SIM_OSC_STR = 2.08; // Using 2MHz for simulation purposes
-parameter OSC_STR = 26.6
+parameter SIM_OSC_STR = "2.08"; // Using 2MHz for simulation purposes
+parameter OSC_STR = "26.6"
 // synthesis translate_off
-    -26.6 + SIM_OSC_STR
+    -"26.6" + SIM_OSC_STR
 // synthesis translate_on
 ;
 parameter OSC_RATE = (OSC_STR*(10**6)); // 26.6 MHz
@@ -120,6 +120,14 @@ reg [B:0] Delt;
 assign Delta = DeltaReg[B-1:0];
 assign LedPhase = DeltaReg[B+1:B];
 
+OSCH  #(.NOM_FREQ(OSC_STR)) 
+i_OSCH (
+
+    /*input */ .STDBY   (1'b0), // could use stdby signal
+    /*output*/ .OSC     (osc ), 
+    /*output*/ .SEDSTDBY(    )  // for sim, use stdby sed sig
+);
+
 always @(posedge osc or negedge sys_rst) begin : DeltaReg_cnt_blk
 
     if (!sys_rst)
@@ -161,14 +169,6 @@ end
 assign red = R;
 assign green = G;
 assign xclk = osc;
-
-OSCH  #(.NOM_FREQ(OSC_STR)) 
-i_OSCH (
-
-    /*input */ .STDBY   (1'b0), // could use stdby signal
-    /*output*/ .OSC     (osc ), 
-    /*output*/ .SEDSTDBY(    )  // for sim, use stdby sed sig
-);
 
 assign LoadN = Tick ? 0 : 1;
 
