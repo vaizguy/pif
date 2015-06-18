@@ -23,9 +23,8 @@ reg        i2c_din;
 reg        i2c_toggle;
 reg        i2c_addr;
 reg [31:0] outBuf_count;
-reg [31:0] obSig_count;
 reg [7 :0] outBuf_data [TEST_BUFFER_DEPTH-1:0];
-reg [7 :0] obSig_data [TEST_BUFFER_DEPTH-1:0];
+reg [7 :0] inBuf_data  [TEST_BUFFER_DEPTH-1:0];
 reg        flush_active;
 
 // Fixes elaboration errors
@@ -71,6 +70,7 @@ reg GSRnX;
 initial begin: reset_blk
     #0   GSRnX = 1'b0;
     #100 GSRnX = 1'b1;
+    #300 GSRnX = 1'b0;
 end
 
 assign sys_rst = GSRnX;
@@ -283,12 +283,12 @@ task flush;
             $display($time, ": Begin flushing I2C test buffer.");
             for(i=0; i<=n-1; i=i+1) begin
                 byte = outBuf_data[i];
+                outBuf_data[i] = 8'd0; // flush bus mem after read
                 i2c_sendbyte(byte);
                 $display("%0d [8'b%B] Buffer item extracted, Read buffer index: %0d", byte, byte, i);   
                 outBuf_count  = outBuf_count-1;
                 // Debugging bus
-                obSig_data[i] = byte;
-                obSig_count = outBuf_count;
+                inBuf_data[i] = byte;
             end
             $display($time, ": Done flushing I2C test buffer.");
 
@@ -346,22 +346,24 @@ initial begin: main_test
     // debug reg
     flush_active = 1'b0;
 
-    // Give some startup time for system
-    #150;
     // Reset Buffer Count 
     outBuf_count = 32'd0;
-    // Reset Buffer data
-    for (i=0; i<250; i=i+1) begin
+
+    // Reset In/Out Buffer memory
+    for (i=0; i<TEST_BUFFER_DEPTH; i=i+1) begin
         outBuf_data[i] <= 8'd0;
-        obSig_data[i] <= 8'd0;
+        inBuf_data[i] <= 8'd0;
     end
+
+    // Give some startup time for system
+    // delay to allow test buffers to settle
+    // before adding i2c test write values
+    #150;
 
     // I2C toggle and address
     i2c_ackn     = 1'b0;
     i2c_toggle   = 1'b0;
     i2c_addr     = I2C_ADDR;
-
-    #150;
 
     // Begin sequence
     // Write Address
