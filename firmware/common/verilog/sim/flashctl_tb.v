@@ -161,7 +161,7 @@ task i2c_sendbyte;
         $display($time, ": Done transmitting byte over I2C.");
 
         // After this ack=0/nack=1 in i2c_din
-        i2c_doclock();
+        i2c_doclock;
         // wait for 2 clock cycles
         @(posedge i2c_clk);
         i2c_ackn = i2c_din;
@@ -201,7 +201,7 @@ task i2c_wr_start;
     input [7:0] i2c_addr;
 
     begin
-        i2c_start();
+        i2c_start;
         i2c_sendbyte({i2c_addr[7:1], 1'b0});
     end
 endtask
@@ -212,7 +212,7 @@ task i2c_rd_start;
     input [7:0] i2c_addr;
 
     begin
-        i2c_start();
+        i2c_start;
         i2c_sendbyte({i2c_addr[7:1], 1'b1});
     end
 endtask
@@ -292,7 +292,7 @@ task flush;
             end
             $display($time, ": Done flushing I2C test buffer.");
 
-            i2c_stop();
+            i2c_stop;
 
             flush_active = 1'b0;
         end
@@ -355,15 +355,15 @@ initial begin: main_test
         inBuf_data[i] <= 8'd0;
     end
 
-    // Give some startup time for system
-    // delay to allow test buffers to settle
-    // before adding i2c test write values
-    #150;
-
     // I2C toggle and address
     i2c_ackn     = 1'b0;
     i2c_toggle   = 1'b0;
     i2c_addr     = I2C_ADDR;
+
+    // Give some startup time for system
+    // delay to allow test buffers to settle
+    // before adding i2c test write values
+    #1500;
 
     // Begin sequence
     // Write Address
