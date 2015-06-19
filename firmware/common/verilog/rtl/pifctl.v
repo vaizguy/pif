@@ -26,7 +26,7 @@ reg [31              :0] MiscRegLocal;
 
 always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
 
-    if (!sys_rst) begin
+    if (sys_rst) begin
         ScratchReg   <= `I2C_DATA_BITS'h15;
         MiscRegLocal <= `LED_ALTERNATING;  // Default is alternating LEDs
     end
@@ -49,7 +49,7 @@ reg [7               :0] IdReadback;
 
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_1
 
-    if (!sys_rst) begin
+    if (sys_rst) begin
         IDscratch <= 8'd0;
         IDletter  <= 8'd0;
         subAddr   <= `R_ID_NUM_SUBS'd0;
@@ -63,7 +63,7 @@ end
 
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_2
 
-    if (!sys_rst) begin
+    if (sys_rst) begin
         subOut <= 8'd0;
     end
     else begin
@@ -78,7 +78,7 @@ end
 
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_3
 
-    if (!sys_rst)
+    if (sys_rst)
         regOut <= 8'd0;
     else if (XI_PRWA == `R_ID)
         regOut <= subOut;
@@ -88,7 +88,7 @@ end
 
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4  
     
-    if (!sys_rst) begin
+    if (sys_rst) begin
         IdReadback <=  8'd0;
         XO         <=  8'd0;
         MiscReg    <= 32'd0;

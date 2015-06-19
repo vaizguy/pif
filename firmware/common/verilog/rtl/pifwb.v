@@ -115,7 +115,7 @@ wire rst = rst_pipe[15];
 // assumes initialisers are honoured by the synthesiser
 always @(posedge xclk or negedge sys_rst) begin: reset_blk
 
-    if (!sys_rst)
+    if (sys_rst)
         rst_pipe <= 16'hffff;
     else
         rst_pipe <= {rst_pipe[14:0], 1'b0};
@@ -156,12 +156,12 @@ reg       vBusy;
 reg       vTIP;
 reg       vRARC;
 reg       vTROE;
-reg [7:0] vInst;
+//reg [7:0] vInst;
 
 
 always @(posedge xclk or negedge sys_rst) begin: wb_i2c_blk
 
-    if(!sys_rst) begin
+    if(sys_rst) begin
         hitI2CSR   <= 1'b0;
         hitI2CRXDR <= 1'b0; 
         hitCFGRXDR <= 1'b0; 
@@ -185,6 +185,21 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
         txReady   <= 1'b0;
         rxReady   <= 1'b0;
         lastTxNak <= 1'b0;
+
+        wbAddr    <= 8'b00000000;
+        wbDat_i   <= 8'b00000000;
+
+        vTIP      <= 1'b0; 
+        vBusy     <= 1'b0;        
+        vRARC     <= 1'b0;        
+        vSlaveTransmitting <= 1'b0;
+        vTxRxRdy  <= 1'b0;        
+        vTROE     <= 1'b0;    
+
+        isAddr <= 1'b0;
+        isData <= 1'b0;  
+        inData <= {`I2C_DATA_BITS{1'b0}};
+
     end
     else begin
 
