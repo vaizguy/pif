@@ -106,13 +106,15 @@ reg  [`TXSubA         :0] XIloc_PRdSubA;     /*: TXSubA;       -- read sub-addre
 reg  [`I2C_DATA_BITS-1:0] XIloc_PD;          /*: TwrData;      -- registered incoming data bus        */
 
 
-// quasi-static data out from the USB
-reg [15:0] rst_pipe;
-wire rst = rst_pipe[15];
+
 
 //---------------------------------------------------------------------
 // Power-Up Reset for 16 clocks
 // assumes initialisers are honoured by the synthesiser
+`ifdef WB_16CLK_PUR
+reg [15:0] rst_pipe;
+wire rst = rst_pipe[15];
+
 always @(posedge xclk or negedge sys_rst) begin: reset_blk
 
     if (sys_rst)
@@ -120,6 +122,28 @@ always @(posedge xclk or negedge sys_rst) begin: reset_blk
     else
         rst_pipe <= {rst_pipe[14:0], 1'b0};
 end
+`else
+reg rst;
+reg nrst;
+reg [3:0] rst_count;
+
+always @(posedge xclk or negedge sys_rst) begin: reset_blk
+
+    if (sys_rst) begin
+        rst <= 1'b0;
+        nrst <= 1'b0;
+        rst_count <= 1'd0;
+    end
+    else begin
+        if (rst_count != 4'd15)
+            rst_count = rst_count + 4'd1;
+        else begin    
+            nrst <= (rst_count==4'd15);
+            rst <= !nrst;
+        end
+    end
+end
+`endif // POWER_UP_16CLK_RESET
 
 // used in debug mode to reset the internal 16-bit counters
 wire wbRst = 1'b0
@@ -159,9 +183,9 @@ reg       vTROE;
 //reg [7:0] vInst;
 
 
-always @(posedge xclk or negedge sys_rst) begin: wb_i2c_blk
+always @(posedge xclk) begin: wb_i2c_blk
 
-    if(sys_rst) begin
+    if(rst) begin
         hitI2CSR   <= 1'b0;
         hitI2CRXDR <= 1'b0; 
         hitCFGRXDR <= 1'b0; 
@@ -173,10 +197,9 @@ always @(posedge xclk or negedge sys_rst) begin: wb_i2c_blk
     end
 end
     
-always @(posedge xclk) begin: wb_statemachine_blk_1
+always @(posedge xclk) begin: wb_fsm_rwReturn_blk
 
     if (rst) begin
-        nextState <= WBstart;
         rwReturn  <= WBstart;
         wbStb     <= 1'b0;
         wbCyc     <= 1'b0;
@@ -200,6 +223,8 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
         isData <= 1'b0;  
         inData <= {`I2C_DATA_BITS{1'b0}};
 
+        cfgBusy <= 1'b0;
+
     end
     else begin
 
@@ -220,7 +245,6 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 // Control Functions in MachXO2 Devices Reference Guide
                 wbDat_i   <= 8'h04;      
                 rwReturn  <= WBinit1;
-                nextState <= WBwr;
             end
 
             WBinit1:
@@ -231,21 +255,16 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 // wait for not busy
                 wbDat_i   <= 8'h00;
                 rwReturn  <= WBinit2;
-                nextState <= WBrd;
             end
 
             WBinit2:
             begin
-                if (busy)
-                    // bus is busy
-                    nextState <= WBrd;
-                else begin
+                if (!busy) begin
                     // Read I2C Receive data rgister - 8 bits             
                     wbAddr    <= I2C1_RXDR;
                     // read and discard RXDR, #1  
                     wbDat_i   <= 8'h00;
                     rwReturn  <= WBinit3;
-                    nextState <= WBrd;
                 end
             end
 
@@ -256,7 +275,6 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 // read and discard RXDR, #2                
                 wbDat_i   <= 8'h00;
                 rwReturn  <= WBinit4;
-                nextState <= WBrd;
             end
 
             WBinit4: 
@@ -267,7 +285,6 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                 // clock stretch enable                
                 wbDat_i   <= 8'h00;
                 rwReturn  <= WBidle;
-                nextState <= WBwr;
             end
 
             //-----------------------------------
@@ -291,7 +308,6 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                     wbDat_i  <= 8'h00;
                     rwReturn <= WBidle;
                 end
-                nextState <= WBrd;
             end
 
             //-----------------------------------
@@ -299,39 +315,31 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
 
             WBwaitTR:
             begin
-                if (lastTxNak)                      // last read?
-                    nextState <= WBstart;
-                else if (txReady) begin
+                if (txReady) begin
                     // Write Transmit data register - 8 bits
                     wbAddr    <= I2C1_TXDR;
                     wbDat_i   <= XO;
                     rwReturn  <= WBout0;
-                    nextState <= WBwr;
                 end
                 else if (rxReady) begin
                     // Read I2C Receive data register - 8 bits                
                     wbAddr    <= I2C1_RXDR;
                     wbDat_i   <= 8'h00;
                     rwReturn  <= WBin0;
-                    nextState <= WBrd;
                 end
-                else if (!busy)
-                    nextState <= WBstart;
-                else
-                    nextState <= WBrd;
             end
 
             //-----------------------------------
             // incoming data
 
-            WBin0: nextState <= WBidle;              // incoming data
+            //WBin0: nextState <= WBidle;              // incoming data
 
             //-----------------------------------
             // outgoing data
 
-            WBout0:  nextState <= WBout1;            // outgoing data
+            //WBout0:  nextState <= WBout1;            // outgoing data
 
-            WBout1:  nextState <= WBidle;            // outgoing data
+            //WBout1:  nextState <= WBidle;            // outgoing data
 
             //-----------------------------------
             // read cycle
@@ -368,7 +376,6 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                     end
                         
                     wbOutBuff <= wbDat_o;
-                    nextState <= rwReturn;
                 end
                 else begin
                     wbStb <= 1'b1;
@@ -385,7 +392,6 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
                     wbStb     <= 1'b0;
                     wbCyc     <= 1'b0;
                     wbWe      <= 1'b0;
-                    nextState <= rwReturn;
                 end
                 else begin
                     wbStb <= 1'b1;
@@ -395,11 +401,92 @@ always @(posedge xclk) begin: wb_statemachine_blk_1
             end
 
             // others
-            default: nextState <= WBstart;
+            default:   rwReturn  <= WBstart;
+        endcase
+    end
+end
+
+always @(*) begin: wb_fsm_next_state_blk
+
+    if (rst) begin
+        nextState = WBstart;
+    end
+    else begin
+
+        case (WBstate)
+
+            //-----------------------------------
+            // initialise
+            
+            WBstart: nextState = WBwr;
+
+            WBinit1: nextState = WBrd;
+
+            WBinit2: nextState = WBrd;
+
+            WBinit3: nextState = WBrd;
+
+            WBinit4: nextState = WBwr;
+
+            //-----------------------------------
+            // wait for I2C activity - "busy" is signalled
+            WBidle : nextState = WBrd;
+
+            //-----------------------------------
+            // wait for TRRDY
+            WBwaitTR:
+            begin
+                if (lastTxNak)                      // last read?
+                    nextState = WBstart;
+                else if (txReady) begin
+                    // Write Transmit data register - 8 bits
+                    nextState = WBwr;
+                end
+                else if (rxReady) begin
+                    // Read I2C Receive data register - 8 bits                
+                    nextState = WBrd;
+                end
+                else if (!busy)
+                    nextState = WBstart;
+                else
+                    nextState = WBrd;
+            end
+
+            //-----------------------------------
+            // incoming data
+            WBin0: nextState = WBidle;              // incoming data
+
+            //-----------------------------------
+            // outgoing data
+
+            WBout0:  nextState = WBout1;            // outgoing data
+
+            WBout1:  nextState = WBidle;            // outgoing data
+
+            //-----------------------------------
+            // read cycle
+            WBrd:  nextState = rwReturn;
+
+            //-----------------------------------
+            // write cycle
+            WBwr: nextState = rwReturn;
+
+            // others
+            default: nextState = WBstart;
 
         endcase
     end
 end
+
+
+always @(posedge xclk) begin: wb_fsm_curr_state_blk
+
+    if (rst)
+        WBstate <= WBstart;
+    else
+        WBstate <= nextState;
+end
+
 
 always @(posedge xclk) begin: wb_sm_xiloc_prdfinished_blk
 
@@ -442,14 +529,6 @@ always @(posedge xclk) begin: wb_statemachine_blk_2
             XIloc_PWr <= 1'b0;
 
     end
-end
-
-always @(posedge xclk) begin: wb_sm_wbstate
-
-    if (rst)
-        WBstate <= WBstart;
-    else
-        WBstate <= nextState;
 end
 
 always @(posedge xclk) begin: wb_statemachine_blk_3
