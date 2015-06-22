@@ -5,6 +5,9 @@
 
 module flashctl_tb;
 
+// 7 bit address for EFB I2C slave is 7'h65
+// as 8 bits it will be 7:1, 0 = 7b1000001, 1'b0
+//                      7:0    = 8b10000010 = 8'h82
 parameter I2C_ADDR = 8'h82;
 parameter TEST_BUFFER_DEPTH = 5;
 
@@ -21,7 +24,7 @@ reg        i2c_sda_out;
 reg        i2c_ackn;
 reg        i2c_din;
 reg        i2c_toggle;
-reg        i2c_addr;
+reg [7 :0] i2c_addr;
 reg [31:0] outBuf_count;
 reg [7 :0] outBuf_data [TEST_BUFFER_DEPTH-1:0];
 reg [7 :0] inBuf_data  [TEST_BUFFER_DEPTH-1:0];
@@ -198,22 +201,24 @@ endtask
 //---------------------------------------------
 task i2c_wr_start;
 
-    input [7:0] i2c_addr;
+    input [7:0] i2c_addr_i;
 
     begin
+        $display("I2C Write start on I2C Slave addr %b", i2c_addr_i[7:1]);
         i2c_start;
-        i2c_sendbyte({i2c_addr[7:1], 1'b0});
+        i2c_sendbyte({i2c_addr_i[7:1], 1'b0});
     end
 endtask
 
 //---------------------------------------------
 task i2c_rd_start;
 
-    input [7:0] i2c_addr;
+    input [7:0] i2c_addr_i;
 
     begin
+        $display("I2C Read start on I2C Slave addr %b", i2c_addr_i[7:1]);
         i2c_start;
-        i2c_sendbyte({i2c_addr[7:1], 1'b1});
+        i2c_sendbyte({i2c_addr_i[7:1], 1'b1});
     end
 endtask
 
@@ -222,6 +227,7 @@ task waitfor;
 
     input [31:0] ticks;
     begin
+        $display("Wait %0d tick(s).", ticks);
         repeat(ticks) @(posedge clk_20mhz);
     end
 
@@ -262,7 +268,7 @@ endtask
 //---------------------------------------------
 task flush;
 
-    input [7:0] i2c_addr;
+    input [7:0] i2c_slv_addr;
     
     integer n;
     integer i;
@@ -277,8 +283,8 @@ task flush;
         if (n>0) begin
             waitfor(1);
             #5;
-            $display($time, ": Flush write start.");
-            i2c_wr_start(i2c_addr);
+            $display($time, ": Flush write start [I2C Slave Address:%h].", i2c_slv_addr);
+            i2c_wr_start(i2c_slv_addr);
 
             $display($time, ": Begin flushing I2C test buffer.");
             for(i=0; i<=n-1; i=i+1) begin
@@ -303,14 +309,14 @@ endtask
 //---------------------------------------------
 task read_reg; // unused but maybe useful for debug
 
-    input [7:0] i2c_addr;
+    input [7:0] i2c_addr_i;
     input read_count;
 
     reg [7:0] v;
 
     integer i;
     begin
-        i2c_rd_start(i2c_addr);
+        i2c_rd_start(i2c_addr_i);
 
         for (i=0; i<=read_count; i=i+1) begin
             if (i < read_count-1) 
@@ -363,7 +369,7 @@ initial begin: main_test
     // Give some startup time for system
     // delay to allow test buffers to settle
     // before adding i2c test write values
-    #1500;
+    #10000;
 
     // Begin sequence
     // Write Address
@@ -378,18 +384,25 @@ initial begin: main_test
 end
 
 initial begin
-    #0;    
+    #0;  
+  
     $display($time,"TEST EXECUTION STARTED!");
+
 `ifdef DUMP_FSDB
     $fsdbAutoSwitchDumpfile(500, "flashctl_tb.fsdb", 10);
     $fsdbDumpvars(0,flashctl_tb); 
-`elsif DUMP_IRUN
+`endif
+
+`ifdef DUMP_TRN
     $recordfile("flashctl_tb.trn","incsize=500");
     $recordvars();
-`else
+`endif
+
+`ifdef DUMP_VCD
     $dumpfile("flashctl_tb.vcd");
     $dumpvars();
 `endif
+
     #999999;
     $display($time,": TEST EXECUTION FINISHED!");
     #1;
