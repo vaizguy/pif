@@ -292,20 +292,17 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
 
             WBidle :
             begin
+                // Read I2C Status registers   
+                // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
+                wbAddr   <= I2C1_SR;
+                wbDat_i  <= 8'h00;
+
+                // wait for I2C activity - "busy" is signalled                    
                 if (busy) begin
-                    // Read I2C Status registers   
-                    // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
-                    wbAddr   <= I2C1_SR;
-                    // wait for I2C activity - "busy" is signalled                    
-                    wbDat_i  <= 8'h00;
                     rwReturn <= WBwaitTR;
                 end
                 else
                 begin
-                    // Read I2C Status registers   
-                    // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
-                    wbAddr   <= I2C1_SR;
-                    wbDat_i  <= 8'h00;
                     rwReturn <= WBidle;
                 end
             end
@@ -346,20 +343,15 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
 
             WBrd:
             begin
+                wbWe  <= 1'b0;
+
                 if (wbAck) begin
                     wbStb <= 1'b0;
                     wbCyc <= 1'b0;
 
+                    // Targeted READ cases
                     if (hitI2CSR) begin
-                        // Read I2C Status registers   
-                        // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
-                        vTIP               <= (wbDat_o[7] == 1'b1);
-                        vBusy              <= (wbDat_o[6] == 1'b1);
-                        vRARC              <= (wbDat_o[5] == 1'b1);
-                        vSlaveTransmitting <= (wbDat_o[4] == 1'b1);
-                        vTxRxRdy           <= (wbDat_o[2] == 1'b1);
-                        vTROE              <= (wbDat_o[1] == 1'b1);
-      
+                        // Read I2C Status registers        
                         txReady   <= vBusy & (vTxRxRdy &  vSlaveTransmitting & !vTIP );
                         rxReady   <= vBusy & (vTxRxRdy & !vSlaveTransmitting         );
                         lastTxNak <= vBusy & (vRARC    &  vSlaveTransmitting &  vTROE);
@@ -373,8 +365,8 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
                     end
                     else if (hitCFGRXDR) begin
                         cfgBusy <= (wbDat_o[7] == 1'b1);
-                    end
-                        
+                    end     
+
                     wbOutBuff <= wbDat_o;
                 end
                 else begin
@@ -389,9 +381,9 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
             WBwr:
             begin
                 if (wbAck) begin
-                    wbStb     <= 1'b0;
-                    wbCyc     <= 1'b0;
-                    wbWe      <= 1'b0;
+                    wbStb <= 1'b0;
+                    wbCyc <= 1'b0;
+                    wbWe  <= 1'b0;
                 end
                 else begin
                     wbStb <= 1'b1;
@@ -401,7 +393,7 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
             end
 
             // others
-            default:   rwReturn  <= WBstart;
+            default:   rwReturn <= WBstart;
         endcase
     end
 end
@@ -465,7 +457,21 @@ always @(*) begin: wb_fsm_next_state_blk
 
             //-----------------------------------
             // read cycle
-            WBrd:  nextState = rwReturn;
+            WBrd:
+            begin
+                if (hitI2CSR) begin
+                    // Read I2C Status registers   
+                    // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
+                    vTIP               = (wbDat_o[7] == 1'b1);
+                    vBusy              = (wbDat_o[6] == 1'b1);
+                    vRARC              = (wbDat_o[5] == 1'b1);
+                    vSlaveTransmitting = (wbDat_o[4] == 1'b1);
+                    vTxRxRdy           = (wbDat_o[2] == 1'b1);
+                    vTROE              = (wbDat_o[1] == 1'b1);
+                end
+
+                nextState = rwReturn;
+            end
 
             //-----------------------------------
             // write cycle
