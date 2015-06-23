@@ -365,6 +365,8 @@ initial begin: main_test
     i2c_ackn     = 1'b0;
     i2c_toggle   = 1'b0;
     i2c_addr     = I2C_ADDR;
+    i2c_sda_out  = 1'b0;
+    i2c_scl_out  = 1'b0;
 
     // Give some startup time for system
     // delay to allow test buffers to settle
