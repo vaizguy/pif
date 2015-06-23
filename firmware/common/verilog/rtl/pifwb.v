@@ -343,8 +343,6 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
 
             WBrd:
             begin
-                wbWe  <= 1'b0;
-
                 if (wbAck) begin
                     wbStb <= 1'b0;
                     wbCyc <= 1'b0;
@@ -459,23 +457,30 @@ always @(*) begin: wb_fsm_next_state_blk
             // read cycle
             WBrd:
             begin
-                if (hitI2CSR) begin
-                    // Read I2C Status registers   
-                    // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
-                    vTIP               = (wbDat_o[7] == 1'b1);
-                    vBusy              = (wbDat_o[6] == 1'b1);
-                    vRARC              = (wbDat_o[5] == 1'b1);
-                    vSlaveTransmitting = (wbDat_o[4] == 1'b1);
-                    vTxRxRdy           = (wbDat_o[2] == 1'b1);
-                    vTROE              = (wbDat_o[1] == 1'b1);
-                end
+                if (wbAck) begin
+                    if (hitI2CSR) begin
+                        // Read I2C Status registers   
+                        // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
+                        vTIP               = (wbDat_o[7] == 1'b1);
+                        vBusy              = (wbDat_o[6] == 1'b1);
+                        vRARC              = (wbDat_o[5] == 1'b1);
+                        vSlaveTransmitting = (wbDat_o[4] == 1'b1);
+                        vTxRxRdy           = (wbDat_o[2] == 1'b1);
+                        vTROE              = (wbDat_o[1] == 1'b1);
+                    end
 
-                nextState = rwReturn;
+                    nextState = rwReturn;
+                end
             end
 
             //-----------------------------------
             // write cycle
-            WBwr: nextState = rwReturn;
+            WBwr:
+            begin 
+                if (wbAck) begin 
+                    nextState = rwReturn;
+                end
+            end
 
             // others
             default: nextState = WBstart;
