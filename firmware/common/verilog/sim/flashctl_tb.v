@@ -29,6 +29,10 @@ reg [31:0] outBuf_count;
 reg [7 :0] outBuf_data [TEST_BUFFER_DEPTH-1:0];
 reg [7 :0] inBuf_data  [TEST_BUFFER_DEPTH-1:0];
 reg        flush_active;
+reg [7 :0] serial_input;
+
+// dbg 
+reg i2c_active;
 
 // Fixes elaboration errors
 PUR PUR_INST(.PUR(1'b1));
@@ -94,6 +98,9 @@ task i2c_start;
         i2c_sda_out = 1'b0;
         @(posedge i2c_clk);
         i2c_scl_out = 1'b0;
+
+        // dbg 
+        i2c_active = 1'b1;
     end
 
 
@@ -113,6 +120,9 @@ task i2c_stop;
         i2c_scl_out = 1'b1;
         @(posedge i2c_clk);
         i2c_sda_out = 1'b1;
+
+        //dbg
+        i2c_active = 1'b0;
     end
 
 endtask
@@ -165,8 +175,8 @@ task i2c_sendbyte;
 
         // After this ack=0/nack=1 in i2c_din
         i2c_doclock;
-        // wait for 2 clock cycles
-        @(posedge i2c_clk);
+        // wait for 1 clock cycles
+        //@(posedge i2c_clk);
         i2c_ackn = i2c_din;
         i2c_toggle = ~i2c_toggle;
     end
@@ -174,25 +184,24 @@ task i2c_sendbyte;
 endtask
 
 //---------------------------------------------
-task i2c_recvbit;
+task i2c_recvbyte;
 
     output [7:0] v;
 
-    reg [7:0] bi;
-
     integer i;
     begin
+        serial_input = 8'd0;
+
         for (i = 0; i < 8; i = i +1) begin
             i2c_sendbit(1'b1);
-            bi = {bi[6:0], i2c_din}; 
+            serial_input = {serial_input[6:0], i2c_din}; 
         end
           
         // send ack=0/nak=1
         i2c_sendbit(i2c_ackn);   
 
         // wait for 2 clock cycles
-        @(posedge i2c_clk);
-        v = bi;
+        v = serial_input;
         i2c_toggle = ~i2c_toggle;
     end
 
@@ -307,7 +316,7 @@ task flush;
 endtask
         
 //---------------------------------------------
-task read_reg; // unused but maybe useful for debug
+task read_reg; 
 
     input [7:0] i2c_addr_i;
     input read_count;
@@ -318,15 +327,17 @@ task read_reg; // unused but maybe useful for debug
     begin
         i2c_rd_start(i2c_addr_i);
 
-        for (i=0; i<=read_count; i=i+1) begin
-            if (i < read_count-1) 
+        for (i=0; i<=read_count-1; i=i+1) begin
+            if (i <= read_count-1) 
                 i2c_ackn = 1'b0;
             else
                 i2c_ackn = 1'b1;
 
-            i2c_recvbit(v);
-            $display("Read Value  %b ", v);
+            i2c_recvbyte(v);
+            $display("Read Value %b ", v);
         end
+
+        i2c_stop;
     end
 endtask
 
@@ -365,13 +376,17 @@ initial begin: main_test
     i2c_ackn     = 1'b0;
     i2c_toggle   = 1'b0;
     i2c_addr     = I2C_ADDR;
-    i2c_sda_out  = 1'b0;
-    i2c_scl_out  = 1'b0;
+    i2c_sda_out  = 1'b1;
+    i2c_scl_out  = 1'b1;
+    i2c_din      = 1'b0;
+    serial_input = 1'b0;
+
+    i2c_active = 1'b0;
 
     // Give some startup time for system
     // delay to allow test buffers to settle
     // before adding i2c test write values
-    #10000;
+    #30000;
 
     // Begin sequence
     // Write Address
@@ -382,6 +397,13 @@ initial begin: main_test
     
     // Flush test i2c buffer to DUT i2c lines for given addr
     flush(i2c_addr);
+
+    //// Read addr
+    //write_addr(6'd2);
+    //flush(i2c_addr);
+
+    //// Read data
+    //read_reg(i2c_addr, 1);
 
 end
 
