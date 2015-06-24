@@ -167,7 +167,7 @@ task i2c_sendbyte;
     integer i;
     begin
         $display($time, ": Begin transmitting byte over I2C.");
-        for (i = 0; i < 8; i = i +1) begin
+        for (i = 7; i >= 0; i = i-1) begin
           	$display ("Sending Bit-%0d = %b", i, byte[i]);
             i2c_sendbit(byte[i]);
         end
@@ -192,7 +192,7 @@ task i2c_recvbyte;
     begin
         serial_input = 8'd0;
 
-        for (i = 0; i < 8; i = i +1) begin
+        for (i = 7; i >= 0; i = i-1) begin
             i2c_sendbit(1'b1);
             serial_input = {serial_input[6:0], i2c_din}; 
         end
