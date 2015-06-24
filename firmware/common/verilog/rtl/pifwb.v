@@ -105,7 +105,8 @@ reg                       XIloc_PRdFinished; /*: boolean;      -- registered in 
 reg  [`TXSubA         :0] XIloc_PRdSubA;     /*: TXSubA;       -- read sub-address                    */
 reg  [`I2C_DATA_BITS-1:0] XIloc_PD;          /*: TwrData;      -- registered incoming data bus        */
 
-
+reg                       read_active;
+reg                       write_active;
 
 
 //---------------------------------------------------------------------
@@ -298,13 +299,10 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
                 wbDat_i  <= 8'h00;
 
                 // wait for I2C activity - "busy" is signalled                    
-                if (busy) begin
+                if (busy) 
                     rwReturn <= WBwaitTR;
-                end
                 else
-                begin
                     rwReturn <= WBidle;
-                end
             end
 
             //-----------------------------------
@@ -371,6 +369,9 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
                     wbStb <= 1'b1;
                     wbCyc <= 1'b1;
                 end
+
+                write_active = 1'b0;
+                read_active = 1'b1;
             end
 
             //-----------------------------------
@@ -388,6 +389,9 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
                     wbCyc <= 1'b1;
                     wbWe  <= 1'b1;
                 end
+
+                write_active = 1'b1;
+                read_active = 1'b0;
             end
 
             // others
@@ -428,14 +432,12 @@ always @(*) begin: wb_fsm_next_state_blk
             begin
                 if (lastTxNak)                      // last read?
                     nextState = WBstart;
-                else if (txReady) begin
+                else if (txReady) 
                     // Write Transmit data register - 8 bits
                     nextState = WBwr;
-                end
-                else if (rxReady) begin
+                else if (rxReady) 
                     // Read I2C Receive data register - 8 bits                
                     nextState = WBrd;
-                end
                 else if (!busy)
                     nextState = WBstart;
                 else
@@ -499,7 +501,7 @@ always @(posedge xclk) begin: wb_fsm_curr_state_blk
 end
 
 
-always @(posedge xclk) begin: wb_sm_xiloc_prdfinished_blk
+always @(posedge xclk) begin: wb_fsm_xiloc_prdfin_blk
 
     if (rst)
         XIloc_PRdFinished <= 'd0;
@@ -508,7 +510,7 @@ always @(posedge xclk) begin: wb_sm_xiloc_prdfinished_blk
 
 end
 
-always @(posedge xclk) begin: wb_statemachine_blk_2
+always @(posedge xclk) begin: wb_fsm_pifctlreg_blk
 
     if (rst) begin
         rwAddr            <= `TXA_W'd0;
