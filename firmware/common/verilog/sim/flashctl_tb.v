@@ -38,6 +38,9 @@ reg i2c_active;
 PUR PUR_INST(.PUR(1'b1));
 GSR GSR_INST(.GSR(1'b1));
 
+// Pull ups on I2C lines
+pullup (i2c_scl), (i2c_sda);
+
 flasher i_flasher(
 
     // I2C interface
@@ -175,8 +178,6 @@ task i2c_sendbyte;
 
         // After this ack=0/nack=1 in i2c_din
         i2c_doclock;
-        // wait for 1 clock cycles
-        //@(posedge i2c_clk);
         i2c_ackn = i2c_din;
         i2c_toggle = ~i2c_toggle;
     end
