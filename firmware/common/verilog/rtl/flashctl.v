@@ -31,6 +31,8 @@ wire [`I2C_DATA_BITS-1:0] XI_PD;          /*: TwrData;      -- registered incomi
 IB IBgsr (.I(GSRn), .O(GSRnX));
 GSR GSR_GSR (.GSR(GSRnX));
 
+pullup (SDA), (SCL);
+
 // LED Flasher
 pif_flasher i_pif_flasher (
     
