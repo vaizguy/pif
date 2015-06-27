@@ -213,13 +213,6 @@ always @(posedge xclk) begin: wb_fsm_rwReturn_blk
         wbAddr    <= 8'b00000000;
         wbDat_i   <= 8'b00000000;
 
-        vTIP      <= 1'b0; 
-        vBusy     <= 1'b0;        
-        vRARC     <= 1'b0;        
-        vSlaveTransmitting <= 1'b0;
-        vTxRxRdy  <= 1'b0;        
-        vTROE     <= 1'b0;    
-
         isAddr <= 1'b0;
         isData <= 1'b0;  
         inData <= {`I2C_DATA_BITS{1'b0}};
@@ -404,6 +397,12 @@ always @(*) begin: wb_fsm_next_state_blk
 
     if (rst) begin
         nextState = WBstart;
+        vTIP      = 1'b0; 
+        vBusy     = 1'b0;        
+        vRARC     = 1'b0;        
+        vSlaveTransmitting <= 1'b0;
+        vTxRxRdy  = 1'b0;        
+        vTROE     = 1'b0;    
     end
     else begin
 
