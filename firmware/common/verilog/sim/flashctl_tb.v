@@ -80,7 +80,6 @@ reg GSRnX;
 initial begin: reset_blk
     #0   GSRnX = 1'b0;
     #100 GSRnX = 1'b1;
-    #300 GSRnX = 1'b0;
 end
 
 assign sys_rst = GSRnX;

@@ -23,7 +23,7 @@
 
 //-----------------------------------------------------------
 // ID register, read-only
-`define R_ID `TXA_W'd0
+`define R_ID `TXA_W'd0 // 16'd0
 
 // ID subregisters
 //  0     ID                        BX4/8/16 = G/L/A
@@ -37,14 +37,14 @@
 `define R_ID_MISC     `R_ID_NUM_SUBS'd2
 
 // Scratch register, write here, read via R_ID, subaddr 1
-`define W_SCRATCH_REG `TXA_W'd1
+`define W_SCRATCH_REG 1
 
 // Misc register, write here, read via R_ID, subaddr 2
 // one of the examples uses this register to control the LEDs
-`define W_MISC_REG    `TXA_W'd2
+`define W_MISC_REG    2
 
 // LED States
-`define LED_ALTERNATING 32'd0
-`define LED_SYNC        32'd1
-`define LED_OFF         32'd2
+`define LED_ALTERNATING 0
+`define LED_SYNC        1
+`define LED_OFF         2
 

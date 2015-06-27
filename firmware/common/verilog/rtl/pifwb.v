@@ -9,11 +9,11 @@ module pifwb (
 
     //XIrec                        XI     ,      // works only with sv
 
-    output                       XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
-    output  [`TXA            :0] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
-    output                       XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
-    output  [`TXSubA         :0] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
-    output  [`I2C_DATA_BITS-1:0] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
+    output  reg                      XI_PWr,         /*: boolean;      -- registered single-clock write strobe*/ 
+    output  reg [`TXA            :0] XI_PRWA,        /*: TXA;          -- registered incoming addr bus        */
+    output  reg                      XI_PRdFinished, /*: boolean;      -- registered in clock PRDn goes off   */ 
+    output  reg [`TXSubA         :0] XI_PRdSubA,     /*: TXSubA;       -- read sub-address                    */
+    output  reg [`I2C_DATA_BITS-1:0] XI_PD,          /*: TwrData;      -- registered incoming data bus        */
 
     input   [7               :0] XO,
 
@@ -118,7 +118,7 @@ wire rst = rst_pipe[15];
 
 always @(posedge xclk or negedge sys_rst) begin: reset_blk
 
-    if (sys_rst)
+    if (~sys_rst)
         rst_pipe <= 16'hffff;
     else
         rst_pipe <= {rst_pipe[14:0], 1'b0};
@@ -130,7 +130,7 @@ reg [3:0] rst_count;
 
 always @(posedge xclk or negedge sys_rst) begin: reset_blk
 
-    if (sys_rst) begin
+    if (~sys_rst) begin
         rst <= 1'b0;
         nrst <= 1'b0;
         rst_count <= 1'd0;
@@ -500,17 +500,7 @@ always @(posedge xclk) begin: wb_fsm_curr_state_blk
         WBstate <= nextState;
 end
 
-
-always @(posedge xclk) begin: wb_fsm_xiloc_prdfin_blk
-
-    if (rst)
-        XIloc_PRdFinished <= 'd0;
-    else
-        XIloc_PRdFinished <= (WBstate == WBout0);
-
-end
-
-always @(posedge xclk) begin: wb_fsm_pifctlreg_blk
+always @(posedge xclk) begin: wb_fsm_pifctl_blk_1
 
     if (rst) begin
         rwAddr            <= `TXA_W'd0;
@@ -521,30 +511,38 @@ always @(posedge xclk) begin: wb_fsm_pifctlreg_blk
     end 
     else begin 
 
-        if ((WBstate == WBin0) & isAddr)
-            rwAddr <= inData[`TXARange];
-
-        if ((WBstate == WBin0) & isAddr) 
+        if ((WBstate == WBin0) & isAddr) begin
+            rwAddr <= inData[`TXARange]; // TODO 
             RdSubAddr <= 'd0;
+            WrSubAddr <= 'd0;
+        end
+
         else if (XIloc_PRdFinished)
             RdSubAddr <= (RdSubAddr +1) % (`XSUBA_MAX+1);
 
-        if ((WBstate == WBin0) & isAddr)
-            WrSubAddr <= 'd0;
         else if (XIloc_PWr)
             WrSubAddr <= (WrSubAddr +1) % (`XSUBA_MAX+1);
 
-        if ((WBstate == WBin0) & isData) begin
+        else if ((WBstate == WBin0) & isData) begin
             XIloc_PD  <= inData;
             XIloc_PWr <= 1'b1;
         end
         else
             XIloc_PWr <= 1'b0;
-
     end
 end
 
-always @(posedge xclk) begin: wb_statemachine_blk_3
+
+always @(posedge xclk) begin: wb_fsm_xiloc_prdfin_blk
+
+    if (rst)
+        XIloc_PRdFinished <= 'd0;
+    else
+        XIloc_PRdFinished <= (WBstate == WBout0);
+end
+
+
+always @(posedge xclk) begin: wb_fsm_pifctl_blk_2
 
     if (rst) begin
         XIloc_PRWA    <= 'd0;
@@ -559,11 +557,22 @@ end
 
 // Assign XI Nets
 //assign XI <= XIloc;
-assign XI_PWr         = XIloc_PWr        ;
-assign XI_PRWA        = XIloc_PRWA       ;
-assign XI_PRdFinished = XIloc_PRdFinished;
-assign XI_PRdSubA     = XIloc_PRdSubA    ;
-assign XI_PD          = XIloc_PD         ;
+always @(posedge xclk) begin
+    if (rst) begin
+        XI_PWr         <= 'b0;
+        XI_PRWA        <= 'b0;
+        XI_PRdFinished <= 'b0;
+        XI_PRdSubA     <= 'b0;
+        XI_PD          <= 'b0;
+    end
+    else begin
+        XI_PWr         <= XIloc_PWr;
+        XI_PRWA        <= XIloc_PRWA;
+        XI_PRdFinished <= XIloc_PRdFinished;
+        XI_PRdSubA     <= XIloc_PRdSubA;
+        XI_PD          <= XIloc_PD;
+    end
+end
 
    
 endmodule
