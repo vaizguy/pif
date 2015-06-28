@@ -328,7 +328,7 @@ task read_reg;
         i2c_rd_start(i2c_addr_i);
 
         for (i=0; i<=read_count-1; i=i+1) begin
-            if (i <= read_count-1) 
+            if (i < read_count-1) 
                 i2c_ackn = 1'b0;
             else
                 i2c_ackn = 1'b1;
@@ -398,12 +398,12 @@ initial begin: main_test
     // Flush test i2c buffer to DUT i2c lines for given addr
     flush(i2c_addr);
 
-    //// Read addr
-    //write_addr(6'd2);
-    //flush(i2c_addr);
+    // Read addr
+    write_addr(6'd2);
+    flush(i2c_addr);
 
-    //// Read data
-    //read_reg(i2c_addr, 1);
+    // Read data
+    read_reg(i2c_addr, 1);
 
 end
 
