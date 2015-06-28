@@ -71,9 +71,9 @@ module pif_flasher (
 );
 
 parameter SIM_OSC_STR = "2.08"; // Using 2MHz for simulation purposes
-parameter OSC_STR = "26.6"
+parameter OSC_STR = 26.6
 // synthesis translate_off
-    -"26.6" + SIM_OSC_STR
+    -26.6 + SIM_OSC_STR
 // synthesis translate_on
 ;
 parameter OSC_RATE = (OSC_STR*(10**6)); // 26.6 MHz
