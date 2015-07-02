@@ -3,7 +3,7 @@
 // I2C interface
 //-----------------------------------------------------------
 // these constants are defined in outer 'pifcfg' files
-`define ID             8'h41       // PIF_ID
+`define DEVICE_ID      8'h41       // PIF_ID
 `define DEVICE_DENSITY "1200L"     // XO2_DENSITY
 
 `define A_ADDR 2'b00
@@ -17,13 +17,16 @@
 `define XSUBA_MAX  2**`XSUBA_BITS-1
 
 `define TXARange  `XA_BITS-1:0
+
 `define TXA       2**`XA_BITS-1
 `define TXA_W     2**`XA_BITS
-`define TXSubA    `XSUBA_MAX
+
+`define TXSubA    2**`XSUBA_BITS-1
+`define TXSubA_W  2**`XSUBA_BITS
 
 //-----------------------------------------------------------
 // ID register, read-only
-`define R_ID `TXA_W'd0 // 16'd0
+`define R_ID 0 
 
 // ID subregisters
 //  0     ID                        BX4/8/16 = G/L/A
@@ -32,9 +35,9 @@
 //  3..31 ID letter                 abcdefghij...
 //
 `define R_ID_NUM_SUBS 32
-`define R_ID_ID       `R_ID_NUM_SUBS'd0
-`define R_ID_SCRATCH  `R_ID_NUM_SUBS'd1
-`define R_ID_MISC     `R_ID_NUM_SUBS'd2
+`define R_ID_ID       0
+`define R_ID_SCRATCH  1
+`define R_ID_MISC     2
 
 // Scratch register, write here, read via R_ID, subaddr 1
 `define W_SCRATCH_REG 1

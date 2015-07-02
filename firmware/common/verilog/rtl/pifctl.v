@@ -45,6 +45,7 @@ reg [7               :0] subOut;
 reg [7               :0] regOut;
 reg [7               :0] IdReadback;
 
+
 always @(*) begin: wishbone_reg_readback_blk_1
 
     if (~sys_rst) begin
@@ -54,10 +55,11 @@ always @(*) begin: wishbone_reg_readback_blk_1
     end
     else begin
         IDscratch = {2'b01, ScratchReg                };
-        IDletter  = {4'd6 , to_4bit_vector(XI_PRdSubA)}; // 61h='a'
+        IDletter  = {4'd6 , bus128_to_4bit_vector(XI_PRdSubA)}; // 61h='a'
         subAddr   = XI_PRdSubA % `R_ID_NUM_SUBS;
     end
 end
+
 
 always @(*) begin: wishbone_reg_readback_blk_2
 
@@ -66,13 +68,14 @@ always @(*) begin: wishbone_reg_readback_blk_2
     end
     else begin
         case (subAddr)
-            `R_ID_ID     : subOut = `ID;
+            `R_ID_ID     : subOut = `DEVICE_ID;
             `R_ID_SCRATCH: subOut = IDscratch;
-            `R_ID_MISC   : subOut = {4'd5, to_4bit_vector(MiscRegLocal)}; // 50h='P'
-            default: subOut = IDletter;
+            `R_ID_MISC   : subOut = {4'd5, bus32_to_4bit_vector(MiscRegLocal)}; // 50h='P'
+            default      : subOut = IDletter;
         endcase
     end
 end
+
 
 always @(*) begin: wishbone_reg_readback_blk_3
 
@@ -83,6 +86,7 @@ always @(*) begin: wishbone_reg_readback_blk_3
     else
         regOut = 8'd0;
 end
+
 
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4  
     
@@ -98,9 +102,16 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4
     end
 end
 
-function [3:0] to_4bit_vector (input arg);
+
+function [3:0] bus32_to_4bit_vector (input [31:0] arg);
     begin
-        to_4bit_vector = arg % (2**4);       
+        bus32_to_4bit_vector = arg % (2**4);       
+    end
+endfunction
+
+function [3:0] bus128_to_4bit_vector (input [`TXSubA_W:0] arg);
+    begin
+        bus128_to_4bit_vector = arg % (2**4);       
     end
 endfunction
 
