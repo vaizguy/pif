@@ -120,6 +120,8 @@ always @(posedge xclk or negedge sys_rst) begin: reset_blk
 
     if (~sys_rst)
         rst_pipe <= 16'hffff;
+    else if (rst_pipe == 16'h0000)
+        rst_pipe <= rst_pipe;   
     else
         rst_pipe <= {rst_pipe[14:0], 1'b0};
 end
@@ -184,7 +186,7 @@ reg       vTROE;
 //reg [7:0] vInst;
 
 
-always @(posedge xclk) begin: wb_i2c_blk
+always @(posedge xclk or posedge rst) begin: wb_i2c_blk
 
     if(rst) begin
         hitI2CSR   <= 1'b0;
@@ -198,7 +200,7 @@ always @(posedge xclk) begin: wb_i2c_blk
     end
 end
     
-always @(posedge xclk) begin: wb_fsm_rwReturn_blk
+always @(posedge xclk or posedge rst) begin: wb_fsm_rwReturn_blk
 
     if (rst) begin
         rwReturn  <= WBstart;
@@ -491,7 +493,7 @@ always @(*) begin: wb_fsm_next_state_blk
 end
 
 
-always @(posedge xclk) begin: wb_fsm_curr_state_blk
+always @(posedge xclk or posedge rst) begin: wb_fsm_curr_state_blk
 
     if (rst)
         WBstate <= WBstart;
@@ -499,30 +501,45 @@ always @(posedge xclk) begin: wb_fsm_curr_state_blk
         WBstate <= nextState;
 end
 
-always @(posedge xclk) begin: wb_fsm_pifctl_blk_1
+
+always @(posedge xclk or posedge rst) begin: wb_fsm_i2c_addr_rd_blk
 
     if (rst) begin
         rwAddr            <= `TXA_W'd0;
-        RdSubAddr         <= 'd0;
-        WrSubAddr         <= 'd0;
-        XIloc_PD          <= 'd0;
-        XIloc_PWr         <= 'd0;
+        RdSubAddr         <= `TXSubA_W'd0;
+        WrSubAddr         <= `TXSubA_W'd0;
     end 
     else begin 
 
+        // Address
         if ((WBstate == WBin0) & isAddr) begin
-            rwAddr <= inData[`TXARange]; // TODO 
-            RdSubAddr <= 'd0;
-            WrSubAddr <= 'd0;
+            // In this case, data is address (i.e. MAX width - 3:0, 4 bit 
+            // reg addressing )
+            rwAddr <= inData[`TXARange];
+            // 2^7, 127:0, 128 bit sub addressing 
+            RdSubAddr <= `TXSubA_W'd0;
+            WrSubAddr <= `TXSubA_W'd0;
         end
 
         else if (XIloc_PRdFinished)
-            RdSubAddr <= (RdSubAddr +1) % (`XSUBA_MAX+1);
+            RdSubAddr <= (RdSubAddr +1) % (`TXSubA_W);
 
         else if (XIloc_PWr)
-            WrSubAddr <= (WrSubAddr +1) % (`XSUBA_MAX+1);
+            WrSubAddr <= (WrSubAddr +1) % (`TXSubA_W); // Unused signal
+    end
+end
 
-        else if ((WBstate == WBin0) & isData) begin
+
+always @(posedge xclk or posedge rst) begin: wb_fsm_i2c_data_rd_blk
+
+    if (rst) begin
+        XIloc_PD          <= `I2C_DATA_BITS'd0;
+        XIloc_PWr         <= 1'b0;
+    end 
+    else begin 
+
+        // Data
+        if ((WBstate == WBin0) & isData) begin
             XIloc_PD  <= inData;
             XIloc_PWr <= 1'b1;
         end
@@ -532,20 +549,20 @@ always @(posedge xclk) begin: wb_fsm_pifctl_blk_1
 end
 
 
-always @(posedge xclk) begin: wb_fsm_xiloc_prdfin_blk
+always @(posedge xclk or posedge rst) begin: wb_fsm_prdfin_blk
 
     if (rst)
-        XIloc_PRdFinished <= 'd0;
+        XIloc_PRdFinished <= 1'b0;
     else
         XIloc_PRdFinished <= (WBstate == WBout0);
 end
 
 
-always @(posedge xclk) begin: wb_fsm_pifctl_blk_2
+always @(posedge xclk or posedge rst) begin: wb_fsm_pifctl_blk_2
 
     if (rst) begin
-        XIloc_PRWA    <= 'd0;
-        XIloc_PRdSubA <= 'd0;        
+        XIloc_PRWA    <= `TXA_W'd0;
+        XIloc_PRdSubA <= `TXSubA_W'd0;        
     end
     else begin
         XIloc_PRWA    <= rwAddr;
@@ -556,13 +573,13 @@ end
 
 // Assign XI Nets
 //assign XI <= XIloc;
-always @(posedge xclk) begin
+always @(posedge xclk or posedge rst) begin
     if (rst) begin
-        XI_PWr         <= 'b0;
-        XI_PRWA        <= 'b0;
-        XI_PRdFinished <= 'b0;
-        XI_PRdSubA     <= 'b0;
-        XI_PD          <= 'b0;
+        XI_PWr         <= 1'b0;
+        XI_PRWA        <= `TXA_W'b0;
+        XI_PRdFinished <= 1'b0;
+        XI_PRdSubA     <= `TXSubA_W'b0;
+        XI_PD          <= `I2C_DATA_BITS'b0;
     end
     else begin
         XI_PWr         <= XIloc_PWr;
