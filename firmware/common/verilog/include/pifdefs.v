@@ -14,18 +14,15 @@
 
 `define XA_BITS    4               // 16 Address registers
 `define XSUBA_BITS 7               // 128 sub addresses
-`define XSUBA_MAX  2**`XSUBA_BITS-1
+`define XSUBA_MAX  127
 
 `define TXARange  `XA_BITS-1:0
 
-`define TXA       2**`XA_BITS-1
-`define TXA_W     2**`XA_BITS
+`define TXA       15
+`define TXA_W     16
+`define TXSubA    127
+`define TXSubA_W  128
 
-`define TXSubA    2**`XSUBA_BITS-1
-`define TXSubA_W  2**`XSUBA_BITS
-
-//-----------------------------------------------------------
-// ID register, read-only
 `define R_ID 0 
 
 // ID subregisters
