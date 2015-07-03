@@ -319,7 +319,7 @@ endtask
 task read_reg; 
 
     input [7:0] i2c_addr_i;
-    input read_count;
+    input integer read_count;
 
     reg [7:0] v;
 
@@ -399,11 +399,11 @@ initial begin: main_test
     flush(i2c_addr);
 
     // Read addr
-    write_addr(6'd2);
+    write_addr(6'd0);
     flush(i2c_addr);
 
     // Read data
-    read_reg(i2c_addr, 1);
+    read_reg(i2c_addr, 3);
 
 end
 
