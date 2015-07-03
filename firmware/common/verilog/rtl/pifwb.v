@@ -112,7 +112,7 @@ reg                       write_active;
 //---------------------------------------------------------------------
 // Power-Up Reset for 16 clocks
 // assumes initialisers are honoured by the synthesiser
-`ifdef WB_16CLK_PUR
+`ifndef NO_WB_16CLK_PUR
 reg [15:0] rst_pipe;
 wire rst = rst_pipe[15];
 
@@ -149,7 +149,7 @@ end
 `endif // POWER_UP_16CLK_RESET
 
 // used in debug mode to reset the internal 16-bit counters
-wire wbRst = 1'b0
+wire wbRst = ~sys_rst
 // synthesis translate_off
              | rst
 // synthesis translate_on
@@ -186,9 +186,9 @@ reg       vTROE;
 //reg [7:0] vInst;
 
 
-always @(posedge xclk or posedge rst) begin: wb_i2c_blk
+always @(posedge xclk or negedge sys_rst) begin: wb_i2c_blk
 
-    if(rst) begin
+    if(~sys_rst) begin
         hitI2CSR   <= 1'b0;
         hitI2CRXDR <= 1'b0; 
         hitCFGRXDR <= 1'b0; 
@@ -200,9 +200,9 @@ always @(posedge xclk or posedge rst) begin: wb_i2c_blk
     end
 end
     
-always @(posedge xclk or posedge rst) begin: wb_fsm_rwReturn_blk
+always @(posedge xclk or negedge sys_rst) begin: wb_fsm_rwReturn_blk
 
-    if (rst) begin
+    if (~sys_rst) begin
         rwReturn  <= WBstart;
         wbStb     <= 1'b0;
         wbCyc     <= 1'b0;
@@ -402,7 +402,7 @@ always @(*) begin: wb_fsm_next_state_blk
         vTIP      = 1'b0; 
         vBusy     = 1'b0;        
         vRARC     = 1'b0;        
-        vSlaveTransmitting <= 1'b0;
+        vSlaveTransmitting = 1'b0;
         vTxRxRdy  = 1'b0;        
         vTROE     = 1'b0;    
     end
@@ -493,18 +493,18 @@ always @(*) begin: wb_fsm_next_state_blk
 end
 
 
-always @(posedge xclk or posedge rst) begin: wb_fsm_curr_state_blk
+always @(posedge xclk or negedge sys_rst) begin: wb_fsm_curr_state_blk
 
-    if (rst)
+    if (~sys_rst)
         WBstate <= WBstart;
     else
         WBstate <= nextState;
 end
 
 
-always @(posedge xclk or posedge rst) begin: wb_fsm_i2c_addr_rd_blk
+always @(posedge xclk or negedge sys_rst) begin: wb_fsm_i2c_addr_rd_blk
 
-    if (rst) begin
+    if (~sys_rst) begin
         rwAddr            <= `TXA_W'd0;
         RdSubAddr         <= `TXSubA_W'd0;
         WrSubAddr         <= `TXSubA_W'd0;
@@ -530,9 +530,9 @@ always @(posedge xclk or posedge rst) begin: wb_fsm_i2c_addr_rd_blk
 end
 
 
-always @(posedge xclk or posedge rst) begin: wb_fsm_i2c_data_rd_blk
+always @(posedge xclk or negedge sys_rst) begin: wb_fsm_i2c_data_rd_blk
 
-    if (rst) begin
+    if (~sys_rst) begin
         XIloc_PD          <= `I2C_DATA_BITS'd0;
         XIloc_PWr         <= 1'b0;
     end 
@@ -549,18 +549,18 @@ always @(posedge xclk or posedge rst) begin: wb_fsm_i2c_data_rd_blk
 end
 
 
-always @(posedge xclk or posedge rst) begin: wb_fsm_prdfin_blk
+always @(posedge xclk or negedge sys_rst) begin: wb_fsm_prdfin_blk
 
-    if (rst)
+    if (~sys_rst)
         XIloc_PRdFinished <= 1'b0;
     else
         XIloc_PRdFinished <= (WBstate == WBout0);
 end
 
 
-always @(posedge xclk or posedge rst) begin: wb_fsm_pifctl_blk_2
+always @(posedge xclk or negedge sys_rst) begin: wb_fsm_pifctl_blk_2
 
-    if (rst) begin
+    if (~sys_rst) begin
         XIloc_PRWA    <= `TXA_W'd0;
         XIloc_PRdSubA <= `TXSubA_W'd0;        
     end
@@ -573,8 +573,8 @@ end
 
 // Assign XI Nets
 //assign XI <= XIloc;
-always @(posedge xclk or posedge rst) begin
-    if (rst) begin
+always @(posedge xclk or negedge sys_rst) begin
+    if (~sys_rst) begin
         XI_PWr         <= 1'b0;
         XI_PRWA        <= `TXA_W'b0;
         XI_PRdFinished <= 1'b0;
