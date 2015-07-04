@@ -177,12 +177,14 @@ myefb myEFB (
 wire wbAck = (wbAck_o == 1'b1);
 
 reg [3:0] nextState;
-reg       vSlaveTransmitting;
-reg       vTxRxRdy;
-reg       vBusy;
-reg       vTIP;
-reg       vRARC;
-reg       vTROE;
+
+// Status wires
+wire       vSlaveTransmitting;
+wire       vTxRxRdy;
+wire       vBusy;
+wire       vTIP;
+wire       vRARC;
+wire       vTROE;
 //reg [7:0] vInst;
 
 
@@ -200,9 +202,9 @@ always @(posedge xclk or negedge sys_rst) begin: wb_i2c_blk
     end
 end
     
-always @(posedge xclk or negedge sys_rst) begin: wb_fsm_rwReturn_blk
+always @(posedge xclk) begin: wb_fsm_rwReturn_blk
 
-    if (~sys_rst) begin
+    if (rst) begin
         rwReturn  <= WBstart;
         wbStb     <= 1'b0;
         wbCyc     <= 1'b0;
@@ -395,16 +397,26 @@ always @(posedge xclk or negedge sys_rst) begin: wb_fsm_rwReturn_blk
     end
 end
 
+
+// I2C Status signals
+assign vTIP               = (WBstate == WBrd) ? ((wbAck ? (hitI2CSR ? wbDat_o[7] : vTIP              ) : vTIP              )) : vTIP              ;
+assign vBusy              = (WBstate == WBrd) ? ((wbAck ? (hitI2CSR ? wbDat_o[6] : vBusy             ) : vBusy             )) : vBusy             ;
+assign vRARC              = (WBstate == WBrd) ? ((wbAck ? (hitI2CSR ? wbDat_o[5] : vRARC             ) : vRARC             )) : vRARC             ;
+assign vSlaveTransmitting = (WBstate == WBrd) ? ((wbAck ? (hitI2CSR ? wbDat_o[4] : vSlaveTransmitting) : vSlaveTransmitting)) : vSlaveTransmitting;
+assign vTxRxRdy           = (WBstate == WBrd) ? ((wbAck ? (hitI2CSR ? wbDat_o[2] : vTxRxRdy          ) : vTxRxRdy          )) : vTxRxRdy          ;
+assign vTROE              = (WBstate == WBrd) ? ((wbAck ? (hitI2CSR ? wbDat_o[1] : vTROE             ) : vTROE             )) : vTROE             ;
+
+
 always @(*) begin: wb_fsm_next_state_blk
 
     if (rst) begin
         nextState = WBstart;
-        vTIP      = 1'b0; 
-        vBusy     = 1'b0;        
-        vRARC     = 1'b0;        
-        vSlaveTransmitting = 1'b0;
-        vTxRxRdy  = 1'b0;        
-        vTROE     = 1'b0;    
+        //vTIP      = 1'b0; 
+        //vBusy     = 1'b0;        
+        //vRARC     = 1'b0;        
+        //vSlaveTransmitting = 1'b0;
+        //vTxRxRdy  = 1'b0;        
+        //vTROE     = 1'b0;    
     end
     else begin
 
@@ -461,16 +473,16 @@ always @(*) begin: wb_fsm_next_state_blk
             WBrd:
             begin
                 if (wbAck) begin
-                    if (hitI2CSR) begin
-                        // Read I2C Status registers   
-                        // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
-                        vTIP               = (wbDat_o[7] == 1'b1);
-                        vBusy              = (wbDat_o[6] == 1'b1);
-                        vRARC              = (wbDat_o[5] == 1'b1);
-                        vSlaveTransmitting = (wbDat_o[4] == 1'b1);
-                        vTxRxRdy           = (wbDat_o[2] == 1'b1);
-                        vTROE              = (wbDat_o[1] == 1'b1);
-                    end
+                    //if (hitI2CSR) begin
+                    //    // Read I2C Status registers   
+                    //    // TIP | BUSY | RARC | SRW | ARBL | TRRDY | TROE HGC
+                    //    vTIP               = (wbDat_o[7] == 1'b1);
+                    //    vBusy              = (wbDat_o[6] == 1'b1);
+                    //    vRARC              = (wbDat_o[5] == 1'b1);
+                    //    vSlaveTransmitting = (wbDat_o[4] == 1'b1);
+                    //    vTxRxRdy           = (wbDat_o[2] == 1'b1);
+                    //    vTROE              = (wbDat_o[1] == 1'b1);
+                    //end
 
                     nextState = rwReturn;
                 end
