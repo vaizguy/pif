@@ -156,19 +156,27 @@ wire wbRst = ~sys_rst
 ;
 
 // Embedded function block (EFB)
+defparam myEFB.EFBInst_0.DEV_DENSITY = `DEVICE_DENSITY;
 myefb myEFB (
-    .wb_clk_i (xclk   ), 
-    .wb_rst_i (wbRst  ), 
-    .wb_cyc_i (wbCyc  ), 
-    .wb_stb_i (wbStb  ), 
-    .wb_we_i  (wbWe   ), 
-    .wb_adr_i (wbAddr ), 
-    .wb_dat_i (wbDat_i), 
-    .wb_dat_o (wbDat_o), 
-    .wb_ack_o (wbAck_o), 
-    .i2c1_scl (i2c_SCL), 
-    .i2c1_sda (i2c_SDA), 
-    .i2c1_irqo(       )
+     
+    .wb_clk_i    (xclk   ), 
+    .wb_rst_i    (wbRst  ), 
+    .wb_cyc_i    (wbCyc  ), 
+    .wb_stb_i    (wbStb  ), 
+    .wb_we_i     (wbWe   ), 
+    .wb_adr_i    (wbAddr ), 
+    .wb_dat_i    (wbDat_i), 
+    .wb_dat_o    (wbDat_o), 
+    .wb_ack_o    (wbAck_o), 
+    .i2c1_scl    (i2c_SCL), 
+    .i2c1_sda    (i2c_SDA), 
+    .i2c1_irqo   (       ),
+    .tc_clki     (xclk   ), 
+    .tc_rstn     (~wbRst ), 
+    .tc_ic       (1'b0   ), 
+    .tc_int      (       ), 
+    .tc_oc       (       ), 
+    .wbc_ufm_irq (       )
 );
 
 //---------------------------------------------------------------------
