@@ -14,13 +14,13 @@ module pifctl (
 
     output reg [7               :0] XO,
     
-    output reg [31              :0] MiscReg,
+    output reg [`I2C_DATA_BITS-1:0] MiscReg,
 
     input                           sys_rst
 );
 
 reg [`I2C_DATA_BITS-1:0] ScratchReg;
-reg [31              :0] MiscRegLocal;
+reg [`I2C_DATA_BITS-1:0] MiscRegLocal;
 
 always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
 
@@ -31,8 +31,8 @@ always @(posedge xclk or negedge sys_rst) begin: reg_write_blk
     else if (XI_PWr) begin
 
         case(XI_PRWA)
-            `W_SCRATCH_REG: ScratchReg   <= XI_PD[`I2C_DATA_BITS-1:0];  // 6'd
-            `W_MISC_REG   : MiscRegLocal <= {26'd0, XI_PD};             // 32'd
+            `W_SCRATCH_REG: ScratchReg   <= XI_PD[`I2C_DATA_BITS-1:0];  // 6'b
+            `W_MISC_REG   : MiscRegLocal <= XI_PD                    ;  // 6'b
             default: ;
         endcase
     end
@@ -70,7 +70,7 @@ always @(*) begin: wishbone_reg_readback_blk_2
         case (subAddr)
             `R_ID_ID     : subOut = `DEVICE_ID;
             `R_ID_SCRATCH: subOut = IDscratch;
-            `R_ID_MISC   : subOut = {4'd5, bus32_to_4bit_vector(MiscRegLocal)}; // 50h='P'
+            `R_ID_MISC   : subOut = {4'd5, bus6_to_4bit_vector(MiscRegLocal)}; // 50h='P'
             default      : subOut = IDletter;
         endcase
     end
@@ -91,9 +91,9 @@ end
 always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4  
     
     if (~sys_rst) begin
-        IdReadback <=  8'd0;
-        XO         <=  8'd0;
-        MiscReg    <= 32'd0;
+        IdReadback <= 8'd0;
+        XO         <= 8'd0;
+        MiscReg    <= 6'd0;
     end
     else begin
         IdReadback <= regOut      ;
@@ -103,9 +103,9 @@ always @(posedge xclk or negedge sys_rst) begin: wishbone_reg_readback_blk_4
 end
 
 
-function [3:0] bus32_to_4bit_vector (input [31:0] arg);
+function [3:0] bus6_to_4bit_vector (input [`I2C_DATA_BITS-1:0] arg);
     begin
-        bus32_to_4bit_vector = arg % (2**4);       
+        bus6_to_4bit_vector = arg % (2**4);       
     end
 endfunction
 

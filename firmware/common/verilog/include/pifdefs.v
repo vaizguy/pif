@@ -44,7 +44,7 @@
 `define W_MISC_REG    2
 
 // LED States
-`define LED_ALTERNATING 0
-`define LED_SYNC        1
-`define LED_OFF         2
+`define LED_ALTERNATING 6'd0
+`define LED_SYNC        6'd1
+`define LED_OFF         6'd2
 

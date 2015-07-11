@@ -20,7 +20,7 @@ wire                      red_flash;
 wire                      green_flash;
 wire [7               :0] XO;
 wire                      GSRnX;
-wire [31              :0] MiscReg;
+wire [`I2C_DATA_BITS-1:0] MiscReg;
 wire                      XI_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
 wire [`TXA            :0] XI_PRWA;        /*: TXA;          -- registered incoming addr bus        */
 wire                      XI_PRdFinished; /*: boolean;      -- registered in clock PRDn goes off   */ 
@@ -31,13 +31,22 @@ wire [`I2C_DATA_BITS-1:0] XI_PD;          /*: TwrData;      -- registered incomi
 IB IBgsr (.I(GSRn), .O(GSRnX));
 GSR GSR_GSR (.GSR(GSRnX));
 
+// synthesis translate_off
+`define ENABLE_GSR
+// synthesis translate_on
+
+
 // LED Flasher
 pif_flasher i_pif_flasher (
     
     /*output*/ .red    (red_flash  ),
     /*output*/ .green  (green_flash),
     /*output*/ .xclk   (xclk       ),
+`ifdef ENABLE_GSR
     /*input */ .sys_rst(GSRnX      )
+`else
+    /*input */ .sys_rst(1'b1       )
+`endif
 );
 
 // Wishbone interface
@@ -56,8 +65,13 @@ pifwb i_pifwb (
                .XI_PD         (XI_PD         ),         
 
     /*input */ .XO            (XO            ),
-    
+
+`ifdef ENABLE_GSR
     /*input */ .sys_rst       (GSRnX         )
+`else
+    /*input */ .sys_rst       (1'b1          )
+`endif
+
 );
 
 // Control logic
@@ -76,7 +90,12 @@ pifctl i_pifctl(
       
     /*output*/ .MiscReg       (MiscReg       ),
 
+`ifdef ENABLE_GSR
     /*input */ .sys_rst       (GSRnX         )
+`else
+    /*input */ .sys_rst       (1'b1          )
+`endif
+
 );
 
 reg r, g;
