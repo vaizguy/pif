@@ -66,12 +66,12 @@ parameter [7:0]  CFG_IRQ    = 8'h74;
 parameter [7:0]  CFG_IRQEN  = 8'h75;
 
 // Wires
-wire [7:0] wbDat_o;
+wire [7:0] wbDat_o /* synthesis syn_keep = 1 */;
 wire       wbAck_o;
 
 // Registers
-reg [7               :0] wbDat_i;
-reg [7               :0] wbAddr;
+reg [7               :0] wbDat_i /* synthesis syn_keep = 1 */;
+reg [7               :0] wbAddr  /* synthesis syn_keep = 1 */;
 reg [7               :0] wbOutBuff;
 
 reg                      busy; 
@@ -85,7 +85,7 @@ reg                      wbCyc;
 reg                      wbStb;
 reg                      wbWe;
 
-reg [3               :0] WBstate;
+reg [3               :0] WBstate/* synthesis syn_keep = 1 */;
 reg [3               :0] rwReturn;
 
 reg                      hitI2CSR;
@@ -177,7 +177,7 @@ myefb myEFB (
     .tc_int      (       ), 
     .tc_oc       (       ), 
     .wbc_ufm_irq (       )
-);
+) /* synthesis syn_black_box=True */; 
 
 //---------------------------------------------------------------------
 // wishbone state machine
