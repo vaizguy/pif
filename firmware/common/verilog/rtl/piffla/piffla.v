@@ -68,7 +68,7 @@ module pif_flasher (
 
     // system reset
     input sys_rst
-);
+) /* synthesis syn_hier = "hard" */;
 
 parameter SIM_OSC_STR = "2.08"; // Using 2MHz for simulation purposes
 parameter OSC_STR = 26.6
