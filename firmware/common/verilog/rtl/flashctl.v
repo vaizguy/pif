@@ -19,7 +19,7 @@ wire                      xclk;
 wire                      red_flash;
 wire                      green_flash;
 wire [7               :0] XO;
-wire                      GSRnX;
+wire                      GSRnX /* synthesis pullmode="UP" */;
 wire [`I2C_DATA_BITS-1:0] MiscReg;
 wire                      XI_PWr;         /*: boolean;      -- registered single-clock write strobe*/ 
 wire [`TXA            :0] XI_PRWA;        /*: TXA;          -- registered incoming addr bus        */
@@ -31,22 +31,14 @@ wire [`I2C_DATA_BITS-1:0] XI_PD;          /*: TwrData;      -- registered incomi
 IB IBgsr (.I(GSRn), .O(GSRnX));
 GSR GSR_GSR (.GSR(GSRnX));
 
-// synthesis translate_off
-`define ENABLE_GSR
-// synthesis translate_on
-
-
 // LED Flasher
 pif_flasher i_pif_flasher (
     
     /*output*/ .red    (red_flash  ),
     /*output*/ .green  (green_flash),
     /*output*/ .xclk   (xclk       ),
-`ifdef ENABLE_GSR
+    
     /*input */ .sys_rst(GSRnX      )
-`else
-    /*input */ .sys_rst(1'b1       )
-`endif
 );
 
 // Wishbone interface
@@ -66,11 +58,7 @@ pifwb i_pifwb (
 
     /*input */ .XO            (XO            ),
 
-`ifdef ENABLE_GSR
     /*input */ .sys_rst       (GSRnX         )
-`else
-    /*input */ .sys_rst       (1'b1          )
-`endif
 
 );
 
@@ -90,14 +78,12 @@ pifctl i_pifctl(
       
     /*output*/ .MiscReg       (MiscReg       ),
 
-`ifdef ENABLE_GSR
     /*input */ .sys_rst       (GSRnX         )
-`else
-    /*input */ .sys_rst       (1'b1          )
-`endif
 
 );
 
+
+`ifdef LED_BEH_MUX
 reg r, g;
 
 always @(*) begin : led_pattern_select_blk
@@ -130,6 +116,29 @@ always @(*) begin : led_pattern_select_blk
 
     endcase
 end
+`else
+wire r, g;
+
+MUX41 i_red_led_mux (
+    .D0 (red_flash ),
+    .D1 (red_flash ),
+    .D2 (1'b0      ),
+    .D3 (1'b0      ),
+    .SD1(MiscReg[0]),
+    .SD2(MiscReg[1]),
+    .Z  (r         )
+);
+
+MUX41 i_green_led_mux (
+    .D0 (green_flash),
+    .D1 (red_flash  ),
+    .D2 (1'b0       ),
+    .D3 (1'b0       ),
+    .SD1(MiscReg[0] ),
+    .SD2(MiscReg[1] ),
+    .Z  (g          )
+);
+`endif
 
 // Outputs
 OB   REG_BUF (.I(r), .O(LEDR));
